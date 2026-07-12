@@ -1,0 +1,6 @@
+{
+  "name": "Inside Physics",
+  "description": "An immersive, experiential learning platform for high-school Physics, designed as a modular, cinematic engine with real-time simulations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
