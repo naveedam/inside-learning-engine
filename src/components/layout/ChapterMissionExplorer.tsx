@@ -42,7 +42,7 @@ export default function ChapterMissionExplorer() {
             <div className="absolute top-0 right-0 w-36 h-36 bg-cyan-500/5 blur-2xl pointer-events-none" />
 
             <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest bg-cyan-950/40 border border-cyan-500/20 px-2 py-0.5 rounded self-start inline-block mb-3">
-              ISC Class XI Curriculum Core
+              {pack?.grade || "ISC Class XI"} Curriculum Core
             </span>
 
             <h2 className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight leading-tight mb-2">
@@ -72,21 +72,24 @@ export default function ChapterMissionExplorer() {
           {/* Core Learning Objectives block */}
           <div className="p-6 sm:p-8 rounded-3xl border border-white/5 bg-gray-950/30 backdrop-blur-md">
             <h3 className="font-mono text-[10px] text-cyan-500 font-bold uppercase tracking-widest mb-4">
-              Academic Curricular Requirements (ISC 11.2)
+              Academic Curricular Requirements ({pack?.grade || "ISC Class XI"})
             </h3>
             <ul className="flex flex-col gap-3 font-mono text-xs text-gray-300">
-              <li className="flex items-start gap-3">
-                <span className="text-cyan-400 font-bold">▶</span>
-                <span>Study of motion in two dimensions: separating vector velocity components on orthogonal plane coordinates.</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-cyan-400 font-bold">▶</span>
-                <span>Investigation of parabolic kinematics trails: establishing peak height trajectory bounds under gravitational force fields.</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-cyan-400 font-bold">▶</span>
-                <span>Deriving the Range formula of a projectile and using quadratic ratios to determine perfect impact coordinates.</span>
-              </li>
+              {chapter.curricularRequirements && chapter.curricularRequirements.length > 0 ? (
+                chapter.curricularRequirements.map((req, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <span className="text-cyan-400 font-bold">▶</span>
+                    <span>{req}</span>
+                  </li>
+                ))
+              ) : (
+                Array.from(new Set(chapter.missions.flatMap(m => m.learningObjectives))).slice(0, 3).map((obj, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <span className="text-cyan-400 font-bold">▶</span>
+                    <span>{obj}</span>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
         </div>

@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { useEngineStore } from "../../core/stores";
+import { getAllCurriculumPacks } from "../../content/registry";
 import { 
   BookOpen, 
   Clock, 
@@ -28,43 +29,26 @@ export default function LabNotebook() {
     resetProgress 
   } = useEngineStore();
 
-  const [selectedDiscoveryId, setSelectedDiscoveryId] = useState<string | null>("horizontal-independence");
+  // Load dynamic discoveries across all subjects
+  const packs = getAllCurriculumPacks();
+  const discoveriesList = packs.flatMap((p) => 
+    p.chapters.flatMap((c) => 
+      c.missions.flatMap((m) => 
+        (m.scientificDiscoveries || []).map((d) => ({
+          id: d.id,
+          title: d.title,
+          subtitle: m.title,
+          icon: p.icon === "Beaker" ? "🧪" : p.icon === "BookOpen" ? "📖" : p.icon === "Compass" ? "🏛️" : "🔭",
+          description: d.description,
+          insight: d.scientificInsight
+        }))
+      )
+    )
+  );
 
-  // Discovery Definitions (Richard Feynman style explanations)
-  const discoveriesList = [
-    {
-      id: "horizontal-independence",
-      title: "Independent Horizontal Motion",
-      subtitle: "Galileo's Conic Split",
-      icon: "🔭",
-      description: "Discovering that sideways velocity is constant while vertical fall accelerates under gravity.",
-      insight: "Galileo discovered a wonderful secret of our universe: if you throw a cargo crate sideways, its side-to-side drift is completely lazy and unbothered by gravity. Gravity only pulls straight down, speeding up the fall, while the horizontal speed remains constant. Together, these two independent speeds weave a perfect conic section: a parabola."
-    },
-    {
-      id: "max-range-mars",
-      title: "Ideal Launch Angle (45°)",
-      subtitle: "The Ultimate Compromise",
-      icon: "🏔️",
-      description: "Finding the sweet spot between vertical airtime and horizontal velocity to reach maximum distance.",
-      insight: "Why is 45 degrees the magic angle? If you aim too low, the ground catches the crate too early before it can travel. If you aim too high, the crate spends all its energy climbing into the upper atmosphere, barely moving sideways. 45 degrees balances airtime and forward velocity, yielding the maximum possible range."
-    },
-    {
-      id: "gravity-shape",
-      title: "Gravity Shapes Trajectories",
-      subtitle: "The Gentle Grip of Mars",
-      icon: "🪐",
-      description: "Observing how a weaker gravitational constant extends flight paths into sweeping arches.",
-      insight: "Gravitational pull is like an invisible hand. On Earth, a heavy 9.8 m/s² grip pulls trajectories down in a steep, compressed arch. But on Mars (3.72 m/s²), the grip is gentle! Trajectories expand, floating twice as far. The path is a physical manifestation of gravity's force bending the fabric of flight."
-    },
-    {
-      id: "mass-independence",
-      title: "Mass Independence in Vacuo",
-      subtitle: "Galileo's Leaning Tower",
-      icon: "⚖️",
-      description: "Proving that a heavy iron block and light wooden box fall at the exact same rate under gravity.",
-      insight: "It seems counter-intuitive, but heavier crates do not fall faster. Gravity pulls harder on a heavy steel crate, yes, but that crate also has more inertia—it requires more force to nudge! These two physical realities cancel out perfectly. In a vacuum, all matter falls at the exact same rate, regardless of mass."
-    }
-  ];
+  const [selectedDiscoveryId, setSelectedDiscoveryId] = useState<string | null>(
+    discoveriesList[0]?.id || "horizontal-independence"
+  );
 
   const activeDiscovery = discoveriesList.find(d => d.id === selectedDiscoveryId);
 
@@ -229,7 +213,7 @@ export default function LabNotebook() {
                 <Compass size={13} /> Right Page: Cognitive Knowledge Map
               </span>
               <span className="text-gray-500 font-mono text-[9px] uppercase">
-                {knowledgeMap.length} of 4 unlocked
+                {knowledgeMap.filter(id => discoveriesList.some(d => d.id === id)).length} of {discoveriesList.length} unlocked
               </span>
             </div>
 

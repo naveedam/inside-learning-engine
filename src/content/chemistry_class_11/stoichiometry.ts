@@ -20,6 +20,11 @@ export const chemistryClass11Curriculum: CurriculumPack = {
       difficulty: "Intermediate",
       estimatedMinutes: 25,
       constellationPosition: { x: 50, y: 30 },
+      curricularRequirements: [
+        "Analysis of acid-base stoichiometric neutralizations and equivalence molar math.",
+        "Investigation of logarithmic pH curve calculations under varying base drop volumes.",
+        "Observation of dynamic visual indicator shifts matching volumetric saturation points."
+      ],
       missions: [
         {
           id: "titration-balance",
@@ -267,7 +272,11 @@ By balancing molecular equivalence, you have proven that chemistry isn't just dr
           },
           missionDuration: 25,
           difficulty: "Intermediate",
-          prerequisites: ["crate-drop"]
+          prerequisites: ["crate-drop"],
+          guidedInquiries: [
+            { label: "🧪 Ask Curie about equivalence points", text: "Why does the pH jump so rapidly around the equivalence point?" },
+            { label: "🧪 Ask Curie about buffer behaviors", text: "What defines a weak acid vs a strong acid titration curve?" }
+          ]
         }
       ]
     }

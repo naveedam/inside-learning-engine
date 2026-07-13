@@ -20,6 +20,11 @@ export const literatureClass11Curriculum: CurriculumPack = {
       difficulty: "Advanced",
       estimatedMinutes: 25,
       constellationPosition: { x: 88, y: 25 },
+      curricularRequirements: [
+        "Analyzing Shelley's juxtaposition of Enlightenment science vs Romantic bioethical caution.",
+        "Evaluating the literary tropes of double characters, parent-child obligations, and societal rejection.",
+        "Deconstructing the frame narrative structure (Walton-Victor-Creature) and dynamic theme coefficients."
+      ],
       missions: [
         {
           id: "frankenstein-debate",
@@ -267,7 +272,11 @@ By modeling narrative tensions, you have proven that classic literature is not a
           },
           missionDuration: 25,
           difficulty: "Advanced",
-          prerequisites: ["bastille-breach"]
+          prerequisites: ["bastille-breach"],
+          guidedInquiries: [
+            { label: "🏛️ Ask Hypatia about system dynamics", text: "How can minor feedback loops in high pressure systems create non-linear collapse thresholds?" },
+            { label: "🏛️ Ask Hypatia about balancing parameters", text: "Can you provide a conceptual Socratic hint regarding the variables of this conflict?" }
+          ]
         }
       ]
     }

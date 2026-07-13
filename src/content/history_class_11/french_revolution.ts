@@ -20,6 +20,11 @@ export const historyClass11Curriculum: CurriculumPack = {
       difficulty: "Intermediate",
       estimatedMinutes: 20,
       constellationPosition: { x: 75, y: 55 },
+      curricularRequirements: [
+        "Study of structural causes of 18th-century social unrest, fiscal crisis, and crop failure.",
+        "Investigation of institutional tipping points: analyzing when state policy sparks citizen mobilization.",
+        "Evaluating the historical branch outcomes of monarchic compromises vs defensive crackdowns."
+      ],
       missions: [
         {
           id: "bastille-breach",
@@ -267,7 +272,11 @@ By balancing social tension equations, you have realized that history is not arb
           },
           missionDuration: 20,
           difficulty: "Intermediate",
-          prerequisites: ["titration-balance"]
+          prerequisites: ["titration-balance"],
+          guidedInquiries: [
+            { label: "🏛️ Ask Hypatia about system dynamics", text: "How can minor feedback loops in high pressure systems create non-linear collapse thresholds?" },
+            { label: "🏛️ Ask Hypatia about balancing parameters", text: "Can you provide a conceptual Socratic hint regarding the variables of this conflict?" }
+          ]
         }
       ]
     }

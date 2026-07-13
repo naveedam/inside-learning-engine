@@ -25,6 +25,7 @@ export interface Chapter {
   estimatedMinutes: number;
   constellationPosition: { x: number; y: number }; // Relative percentage coordinates for constellation map (0-100)
   missions: Mission[];
+  curricularRequirements?: string[];
 }
 
 export interface Mission {
@@ -128,6 +129,7 @@ export interface Mission {
   missionDuration: number; // in minutes
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   prerequisites: string[];
+  guidedInquiries?: { label: string; text: string; }[];
 }
 
 export type MissionStepType = 

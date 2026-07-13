@@ -20,6 +20,11 @@ export const physicsClass11Curriculum: CurriculumPack = {
       difficulty: "Intermediate",
       estimatedMinutes: 20,
       constellationPosition: { x: 32, y: 48 },
+      curricularRequirements: [
+        "Study of motion in two dimensions: separating vector velocity components on orthogonal plane coordinates.",
+        "Investigation of parabolic kinematics trails: establishing peak height trajectory bounds under gravitational force fields.",
+        "Deriving the Range formula of a projectile and using quadratic ratios to determine perfect impact coordinates."
+      ],
       missions: [
         {
           id: "crate-drop",
@@ -286,7 +291,12 @@ By decoupling independent vectors, you have proven that physical mathematics is 
           },
           missionDuration: 20,
           difficulty: "Intermediate",
-          prerequisites: []
+          prerequisites: [],
+          guidedInquiries: [
+            { label: "🔭 Ask Galileo about vector deconstruction", text: "How does splitting the trajectory into constant horizontal velocity and accelerated vertical fall help me clear Tharsis Peak?" },
+            { label: "🍎 Ask Newton about Mars gravity ratio", text: "Since gravity on Mars is 3.72 m/s², how does this lower gravitational pull alter our projectile apex compared to Earth's 9.8 m/s²?" },
+            { label: "🥁 Ask Feynman to visualize the apex speed", text: "At the exact peak of flight (the apex), is the horizontal speed zero? Help me visualize the speed vectors at the top." }
+          ]
         }
       ]
     }

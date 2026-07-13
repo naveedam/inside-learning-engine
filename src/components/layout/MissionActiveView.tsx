@@ -1319,54 +1319,24 @@ export default function MissionActiveView() {
               </div>
 
               {/* SOCRATIC PRESETS DECK */}
-              <div className="px-3 py-2 border-t border-white/10 bg-gray-950/60 flex flex-col gap-1.5">
-                <span className="font-mono text-[8px] text-cyan-400 font-bold uppercase tracking-wider">GUIDED INQUIRIES:</span>
-                <div className="flex flex-col gap-1">
-                  {mission.subject === "Physics" && [
-                    { label: "🔭 Ask Galileo about vector deconstruction", text: "How does splitting the trajectory into constant horizontal velocity and accelerated vertical fall help me clear Tharsis Peak?" },
-                    { label: "🍎 Ask Newton about Mars gravity ratio", text: "Since gravity on Mars is 3.72 m/s², how does this lower gravitational pull alter our projectile apex compared to Earth's 9.8 m/s²?" },
-                    { label: "🥁 Ask Feynman to visualize the apex speed", text: "At the exact peak of flight (the apex), is the horizontal speed zero? Help me visualize the speed vectors at the top." }
-                  ].map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handlePresetClick(p.text)}
-                      disabled={isAiThinking}
-                      className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                  {mission.subject === "Chemistry" && [
-                    { label: "🧪 Ask Curie about equivalence points", text: "Why does the pH jump so rapidly around the equivalence point?" },
-                    { label: "🧪 Ask Curie about buffer behaviors", text: "What defines a weak acid vs a strong acid titration curve?" }
-                  ].map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handlePresetClick(p.text)}
-                      disabled={isAiThinking}
-                      className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                  {mission.subject !== "Physics" && mission.subject !== "Chemistry" && [
-                    { label: "🏛️ Ask Hypatia about system dynamics", text: "How can minor feedback loops in high pressure systems create non-linear collapse thresholds?" },
-                    { label: "🏛️ Ask Hypatia about balancing parameters", text: "Can you provide a conceptual Socratic hint regarding the variables of this conflict?" }
-                  ].map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handlePresetClick(p.text)}
-                      disabled={isAiThinking}
-                      className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
+              {mission.guidedInquiries && mission.guidedInquiries.length > 0 && (
+                <div className="px-3 py-2 border-t border-white/10 bg-gray-950/60 flex flex-col gap-1.5">
+                  <span className="font-mono text-[8px] text-cyan-400 font-bold uppercase tracking-wider">GUIDED INQUIRIES:</span>
+                  <div className="flex flex-col gap-1">
+                    {mission.guidedInquiries.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handlePresetClick(p.text)}
+                        disabled={isAiThinking}
+                        className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Chat input form */}
               <form onSubmit={handleAskMentor} className="p-3 border-t border-white/10 bg-gray-950 flex items-center gap-1.5">
