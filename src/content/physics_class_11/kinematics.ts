@@ -19,7 +19,7 @@ export const physicsClass11Curriculum: CurriculumPack = {
       longDescription: "Calibrate thrust and project trajectories on foreign worlds. Discover how uniform horizontal velocities combine with accelerated gravitational falls to shape perfect parabolas.",
       difficulty: "Intermediate",
       estimatedMinutes: 20,
-      constellationPosition: { x: 32, y: 48 }, // Coordinates on Star constellation Map
+      constellationPosition: { x: 32, y: 48 },
       missions: [
         {
           id: "crate-drop",
@@ -81,7 +81,7 @@ You are the Mission Control Trajectory Operator. Your commands control the elect
                   minMaxLimits: {
                     velocity: [20, 110],
                     angle: [15, 85],
-                    gravity: [1.62, 24.79] // Lunar to Jupiter gravity
+                    gravity: [1.62, 24.79]
                   },
                   targetFormula: {
                     latex: "y = x \\tan(\\theta) - \\frac{g x^2}{2 v_0^2 \\cos^2(\\theta)}",
@@ -128,10 +128,169 @@ By decoupling independent vectors, you have proven that physical mathematics is 
 **Achievement Unlocked: Kinematics Pioneer (ISC Class XI Module 1)**`
               }
             }
-          ]
+          ],
+
+          // --- REUSABLE MISSION FACTORY SCHEMA ADDITIONS (Milestone 3) ---
+          subject: "Physics",
+          chapterName: "Kinematics: Vector Fields & Parabolic Paths",
+          learningObjectives: [
+            "Deconstruct a projectile's path into independent horizontal and vertical vectors.",
+            "Derive the parabolic trajectory mathematical equation empirically.",
+            "Clear a 140m volcanic peak and land the cargo in a narrow 780m-820m safety zone."
+          ],
+          storyNarrative: "Launch an electromagnetic linear payload module across a Martian mountain range to deliver oxygen reserves to a stranded survey team.",
+          world: {
+            environmentName: "Astraea Base Ridge, Mars",
+            visualAtmosphere: "Martian Sunset (Dust and Crimson Sky)",
+            audioLandscape: "Wind hum and magnetic railgun charges"
+          },
+          coreScientificConcept: {
+            name: "Vector Decomposition of Projectile Trajectories",
+            description: "A projectile's vertical flight decelerates and accelerates symmetrically under gravity while its horizontal glide remains at constant velocity, tracing a parabolic curve.",
+            equationLatex: "y = x \\tan(\\theta) - \\frac{g x^2}{2 v_0^2 \\cos^2(\\theta)}"
+          },
+          coreInteraction: "PROJECTILE_AIMING",
+          predictionPrompt: "Where will the supply canister land under Mars gravity if launched at 45 degrees elevation angle? What will happen if we change the payload weight?",
+          predictionPresets: [
+            {
+              id: "mass-float",
+              label: "📦 Lighter Wood/Lithium is buoyant, so it travels further",
+              isMisconception: true,
+              misconceptionId: "MISCONCEPTION_MASS_DEPENDENT_GRAVITY",
+              explanation: "Gravity accelerates all masses at the exact same rate in vacuo."
+            },
+            {
+              id: "mass-heavy",
+              label: "⛓️ Heavy Iron Safe falls much faster under Mars gravity",
+              isMisconception: true,
+              misconceptionId: "MISCONCEPTION_MASS_DEPENDENT_GRAVITY",
+              explanation: "Mass cancels out in the equations of motion; acceleration is constant."
+            },
+            {
+              id: "mass-equal",
+              label: "⚖️ Gravity is independent of mass; the arc will be identical",
+              isMisconception: false,
+              explanation: "Excellent! Galileo proven."
+            },
+            {
+              id: "angle-45",
+              label: "📐 45° splits horizontal & vertical velocities equally for peak distance",
+              isMisconception: false
+            }
+          ],
+          experimentFlow: {
+            parameters: [
+              {
+                name: "velocity",
+                label: "Muzzle Velocity",
+                symbol: "v_0",
+                min: 30,
+                max: 150,
+                step: 1,
+                defaultValue: 55,
+                unit: "m/s"
+              },
+              {
+                name: "angle",
+                label: "Elevation Angle",
+                symbol: "\\theta",
+                min: 10,
+                max: 85,
+                step: 1,
+                defaultValue: 45,
+                unit: "°"
+              },
+              {
+                name: "gravity",
+                label: "Mars Gravity",
+                symbol: "g",
+                min: 1.0,
+                max: 9.8,
+                step: 0.1,
+                defaultValue: 3.72,
+                unit: "m/s²"
+              }
+            ],
+            targets: {
+              name: "range",
+              label: "Tharsis Recovery Zone",
+              min: 780,
+              max: 820,
+              unit: "m",
+              hint: "Aim to land exactly between 780m and 820m."
+            }
+          },
+          reflectionPrompts: [
+            "We found out that gravity exerts equal acceleration regardless of the cargo's mass.",
+            "The low gravity of Mars means we need less angle to clear the Tharsis basalt peak.",
+            "Splitting the vectors proved that horizontal speed stays perfectly constant during flight."
+          ],
+          commonMisconceptions: [
+            {
+              id: "MISCONCEPTION_MASS_DEPENDENT_GRAVITY",
+              name: "Mass-Dependent Gravity",
+              triggerCondition: "cargoMass !== 100",
+              pedagogicalAction: "Trigger simultaneous comparative drop of Wood crate and Iron safe on the Canvas stage to visually falsify."
+            }
+          ],
+          socraticMentorDialogue: [
+            {
+              character: "Galileo Galilei",
+              avatar: "GALILEO",
+              introductoryRemark: "Greetings, Operator. To conquer this mountain, do not see a single path. See two. One horizontal, one vertical."
+            }
+          ],
+          successConditions: {
+            criteriaText: "Canister clears the 140m peak at 400m and lands within the 780m to 820m zone.",
+            rewardXP: 500,
+            badgeUnlocked: {
+              id: "kinematics-pioneer",
+              name: "Kinematics Pioneer"
+            }
+          },
+          failureBehaviors: {
+            impactCraters: true,
+            previousTrajectories: true,
+            radioTransmissions: [
+              "Warning: Canister undershot the target area! Atmosphere sensor reports crash.",
+              "Caution: Payload overshot into Tharsis Canyon! Supply lost."
+            ]
+          },
+          worldMemory: {
+            persistenceEnabled: true,
+            maxMemorySlots: 5
+          },
+          scientificDiscoveries: [
+            {
+              id: "horizontal-independence",
+              title: "Horizontal Independence",
+              description: "Horizontal velocity remains constant and independent of vertical gravitational pull.",
+              scientificInsight: "Nature splits vectors cleanly! The horizontal motion doesn't care that gravity is pulling the object downwards."
+            },
+            {
+              id: "mass-independence",
+              title: "Mass Independence",
+              description: "Objects of different masses fall with equal acceleration in vacuo.",
+              scientificInsight: "Feynman says: All things fall together! A brick and a feather fall at the same rate when air resistance is stripped away."
+            }
+          ],
+          rewards: {
+            xp: 500,
+            badges: ["kinematics-pioneer"]
+          },
+          teacherNotes: "This mission teaches standard Grade 11 kinematics vector decompositions using a Martian colonizing storyline. Guide students to use v_0 = sqrt(R * g) for 45 degree calculations.",
+          assessmentStrategy: "Formative Socratic response scoring based on qualitative rationale vs. quantitative landing accuracy.",
+          accessibilityNotes: "Visual trajectories include high-contrast lines. Audio cues signify click calibration adjustments and successful landing hums.",
+          unlockConditions: {
+            minXP: 0
+          },
+          missionDuration: 20,
+          difficulty: "Intermediate",
+          prerequisites: []
         }
       ]
     }
   ]
 };
+
 export default physicsClass11Curriculum;

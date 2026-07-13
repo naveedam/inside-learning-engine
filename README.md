@@ -1,4 +1,4 @@
-# Inside Learning Engine (ILE) - Version 0.2.0
+# Inside Learning Engine (ILE) - Version 0.3.0
 
 Welcome to the **Inside Learning Engine (ILE)**, a cinematic, spatial, and highly interactive experiential learning platform designed to teach physics and deep sciences through active exploration, predictive simulation, and Socratic debriefing.
 
@@ -6,25 +6,30 @@ This project is built with **React**, **Vite**, **TypeScript**, and **Tailwind C
 
 ---
 
-## 🚀 Key Capabilities (Version 0.2.0)
+## 🚀 Key Capabilities (Version 0.3.0)
 
-Version 0.2.0 delivers the full implementation of **Social Contract #1: Predict → Experiment → Reflection**, forming a robust, closed-loop cognitive learning framework:
+Version 0.3.0 delivers the full implementation of **Social Contract #1: Predict → Experiment → Reflection**, paired with a **Universal Reusable Mission Factory** supporting multi-disciplinary curriculum packs:
 
-### 1. The Cognitive Learning Loop
+### 1. The Universal Mission Factory (New in v0.3.0)
+*   **Subject Agnostic Framework:** Run different academic modules utilizing a single standardized JSON schema.
+*   **Multi-Subject Showcase:** Added fully spec'd out curriculums for **Physics** (Kinematics), **Chemistry** (Stoichiometry Titration), **History** (French Revolution Decision Lines), and **Literature** (Frankenstein Character Analysis).
+*   **Aesthetic Theme Adaptability:** Instantly adapts canvas views, HUD color schemes, and ambient audios based on the active curriculum's visual atmosphere.
+
+### 2. The Cognitive Learning Loop
 *   **Predict Phase (🚩 PREDICT):**
     *   **Tactile Railgun Launcher Controls:** Adjust elevation angle, muzzle velocity, and Mars gravitational strength.
     *   **Spatial Hypothesis Placement:** Clicking or tapping directly on the terrain ground drops an orange 🚩 **Predicted Landing Flag**, visually recording the student's spatial hypothesis on the Canvas stage.
     *   **Qualitative Rationale:** Students select common conceptual presets or write custom text reasoning to justify their physics prediction before locking the launcher.
 *   **Experiment Phase (⚡ EXPERIMENT):**
     *   **Launcher Locks:** Sliders and barrel manipulation are secured during active runs to enforce scientific rigor.
-    *   **Cargo Payload Customization:** Select between various mass types: Wood Crate (100kg), Heavy Iron Safe (500kg), or Lithium Battery (10kg).
+    *   **Cargo Payload Customization:** Select between various mass types: Wood Crate (10kg), Heavy Iron Safe (500kg), or Lithium Battery (10kg).
     *   **Real-Time Vector Telemetry:** Watch force vectors, horizontal velocities, and gravity shapes curves in real-time.
 *   **Reflect Phase (📝 REFLECT):**
     *   **Socratic Comparison Analysis:** Displays target predictions side-by-side with actual empirical landing coordinates, calculating absolute delta margins.
     *   **Co-Observation Simultaneous Test:** Identified mass misconceptions trigger an interactive overlay allowing dual wood/iron comparative drops to visually prove Galileo's Principle of Mass Independence under gravity.
     *   **Research Notebook Archival:** Students record qualitative Socratic observations directly to their permanent record.
 
-### 2. The Researcher's Journal (Lab Notebook)
+### 3. The Researcher's Journal (Lab Notebook)
 *   **Tactile Split-Page Book Layout:** Framed as a beautiful, glowing HUD ledger of scientific exploration.
 *   **Empirical Record Ledger (Left Page):** Lists full chronological loop iterations containing quantitative telemetry, delta values, qualitative hypotheses, and reflection observations.
 *   **Cognitive Knowledge Map (Right Page):** Interactive node-network tracking key scientific discoveries:

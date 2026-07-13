@@ -88,9 +88,20 @@ async function startServer() {
     const systemPrompt = socraticSystemPrompts[mentor] || socraticSystemPrompts.GALILEO;
 
     // Compile dynamic cockpit context based on the user's active flight parameters
-    const flightContext = simulationState 
-      ? `[ACTIVE MISSION HUDS: Canister currently at Horizontal Pos = ${Math.round(simulationState.x || 0)}m, Alt = ${Math.round(simulationState.y || 0)}m, Horizontal Velocity vx = ${Math.round(simulationState.vx || 0)}m/s, Vertical Velocity vy = ${Math.round(simulationState.vy || 0)}m/s. Launch Velocity calibrated to ${simulationState.velocity}m/s at ${simulationState.angle} deg angle inside gravity of ${simulationState.gravity}m/s².]`
+    const params = simulationState?.params || {};
+    const velocity = params.velocity ?? 55;
+    const angle = params.angle ?? 45;
+    const gravity = params.gravity ?? 3.72;
+    const activeMisconceptions = simulationState?.activeMisconceptions || [];
+    const isDualMassActive = activeMisconceptions.includes("MISCONCEPTION_MASS_DEPENDENT_GRAVITY");
+
+    let flightContext = simulationState 
+      ? `[ACTIVE MISSION HUDS: Projectile launch calibrated to velocity v0 = ${velocity} m/s, elevation angle = ${angle} degrees, under gravity g = ${gravity} m/s².]`
       : "[SANDBOX CALIBRATION PENDING]";
+
+    if (isDualMassActive) {
+      flightContext += `\n[COGNITIVE ALERT: The student is testing a critical misconception: they predicted that mass affects projectile trajectories under gravity (believing a lighter wood crate drifts/floats further, or a heavy iron safe crashes sooner). The system has just executed a DUAL-MASS COMPARATIVE LAUNCH showing both a 500kg Iron Safe and a 10kg Wood Crate flying in perfect, synchronized lockstep and landing together at the exact same spot! Gently ask leading Socratic questions to help them reflect on why mass canceled out in the equations of motion (force is proportional to mass, but acceleration is force divided by mass, so mass cancels). Make them feel like a true discoverer!]`;
+    }
 
     const fullPrompt = `${flightContext}\n\nStudent asks: "${query}"`;
 
@@ -103,12 +114,16 @@ async function startServer() {
       } else if (mentor === "FEYNMAN") {
         mockReply = "Hey! Think about the peak of that mountain. If you launch it too fast, it flies right past. If too slow, smash! Try finding that sweet spot where gravity curls the curve right over the peak!";
       } else {
-        mockReply = "Ah, young traveler. Recall that uniform inertia pulls the crate forward, while gravity pulls it down. Try adjusting the launch speed to balance these twin paths.";
+        if (isDualMassActive) {
+          mockReply = "Ah, young observer! Did you see how the great 500kg Iron Safe and the humble 10kg Wood Crate sailed side-by-side without a single hair's breadth of separation? Think deeply: why does the heavy drag of mass not outrun the light crate?";
+        } else {
+          mockReply = "Ah, young traveler. Recall that uniform inertia pulls the crate forward, while gravity pulls it down. Try adjusting the launch speed to balance these twin paths.";
+        }
       }
 
       // Add a small delay for realistic pacing
       await new Promise((resolve) => setTimeout(resolve, 800));
-      return res.json({ response: mockReply });
+      return res.json({ response: mockReply, text: mockReply });
     }
 
     try {
@@ -123,7 +138,7 @@ async function startServer() {
       });
 
       const extractedText = response.text || "My sensors are experiencing minor cosmic interference. Let us ponder the vectors again.";
-      return res.json({ response: extractedText });
+      return res.json({ response: extractedText, text: extractedText });
     } catch (err: any) {
       console.error("Gemini API server-side failure:", err);
       return res.status(500).json({ error: "Cosmic uplink failed", details: err.message });

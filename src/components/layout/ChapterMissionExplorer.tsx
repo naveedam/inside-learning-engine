@@ -5,15 +5,16 @@
 
 import React from "react";
 import { useEngineStore } from "../../core/stores";
-import { getCurriculumPackById } from "../../content/registry";
+import { getAllCurriculumPacks } from "../../content/registry";
 import { Compass, Clock, Award, Play, ChevronLeft, Zap, ArrowRight } from "lucide-react";
 
 export default function ChapterMissionExplorer() {
   const { selectedChapterId, selectChapter, startMission, completedMissions } = useEngineStore();
 
   // Load the active pack and its corresponding chapter metadata
-  const pack = getCurriculumPackById("physics-class-11");
-  const chapter = pack?.chapters.find((ch) => ch.id === selectedChapterId) || pack?.chapters[0];
+  const packs = getAllCurriculumPacks();
+  const pack = packs.find((p) => p.chapters.some((ch) => ch.id === selectedChapterId)) || packs[0];
+  const chapter = pack?.chapters.find((ch) => ch.id === selectedChapterId);
 
   if (!chapter) {
     return (

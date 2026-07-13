@@ -4,6 +4,31 @@ All notable changes to the Inside Learning Engine will be documented in this fil
 
 ---
 
+## [0.3.0] - 2026-07-12
+### Milestone 3: Reusable Mission Factory & Multi-Disciplinary Curriculums
+
+This release introduces the **Universal Mission Factory** pattern, transforming the application into an agnostic curriculum engine. It expands the platform to support Physics, Chemistry, History, and Literature modules through a single, highly flexible schema.
+
+### Added
+*   **Universal Reusable Mission Factory Schema:**
+    *   Defined comprehensive metadata attributes for curriculum subjects in `src/types.ts`.
+    *   Created full, rich subject content configurations for **Physics** (Mars Crate Drop Kinematics), **Chemistry** (Stoichiometry and titration simulation), **History** (French Revolution timeline and branch decisions), and **Literature** (Frankenstein thematic and semantic graph analysis).
+*   **Aesthetic Theme Adaptability:**
+    *   The engine dynamically tunes the spatial HUD color schemes, canvas viewport grids, and ambient soundscapes based on the active curriculum's visual atmosphere.
+*   **Galileo Dual-Mass Co-Observation Overlays:**
+    *   Designed dynamic trajectory tracks drawing both a **500kg Iron Safe** and a **10kg Wood Crate** traveling side-by-side to visually disprove mass-dependence in projectile motion.
+    *   Wired dual-mass cognitive monitoring flags directly to the server-side Gemini prompt builder for custom Socratic interactions regarding Galileo's paradox.
+*   **Socratic Debrief System Update:**
+    *   Designed specialized interactive question card overlays in the Reflection step for dual-mass trials, guiding students towards resolving acceleration ratios.
+
+### Changed
+*   **Responsive Canvas Geometry:**
+    *   Implemented adaptive Canvas resizing and robust touch zone dimensions (minimum 44px) across standard mobile, tablet, and desktop viewports.
+*   **Server API Resilience:**
+    *   Configured CJS bundled server builds using esbuild with sourcemap generation and optimized Node-native external resolution.
+
+---
+
 ## [0.2.0] - 2026-07-12
 ### Milestone 2: The Social Contract Cognitive Loop & Lab Notebook
 

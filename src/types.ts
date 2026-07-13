@@ -34,6 +34,100 @@ export interface Mission {
   description: string;
   objectives: string[];
   steps: MissionStep[];
+
+  // --- REUSABLE MISSION FACTORY SCHEMA ADDITIONS (Milestone 3) ---
+  subject: string; // e.g., "Physics", "Chemistry", "History", "Literature"
+  chapterName: string; // Name of parent chapter
+  learningObjectives: string[];
+  storyNarrative: string;
+  world: {
+    environmentName: string;
+    visualAtmosphere: string; // e.g., "Martian Sunset", "Neon Laboratory", "Smoky Cobblestone"
+    audioLandscape: string; // e.g., "Wind hum and magnetic charges", "Glass clinks and bubbling liquids"
+  };
+  coreScientificConcept: {
+    name: string;
+    description: string;
+    equationLatex?: string;
+  };
+  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS";
+  predictionPrompt: string;
+  predictionPresets: {
+    id: string;
+    label: string;
+    isMisconception: boolean;
+    misconceptionId?: string;
+    explanation?: string;
+  }[];
+  experimentFlow: {
+    parameters: {
+      name: string;
+      label: string;
+      symbol?: string;
+      min: number;
+      max: number;
+      step: number;
+      defaultValue: number;
+      unit: string;
+    }[];
+    targets: {
+      name: string;
+      label: string;
+      min: number;
+      max: number;
+      unit: string;
+      hint: string;
+    };
+  };
+  reflectionPrompts: string[];
+  commonMisconceptions: {
+    id: string;
+    name: string;
+    triggerCondition: string; // e.g., "mass selector !== 100", "too aggressive troop deployment"
+    pedagogicalAction: string; // Socratic prompt or secondary overlay simulation
+  }[];
+  socraticMentorDialogue: {
+    character: string;
+    avatar: "GALILEO" | "NEWTON" | "FEYNMAN" | "CURIE" | "SYSTEM";
+    introductoryRemark: string;
+  }[];
+  successConditions: {
+    criteriaText: string;
+    rewardXP: number;
+    badgeUnlocked?: {
+      id: string;
+      name: string;
+    };
+  };
+  failureBehaviors: {
+    impactCraters: boolean;
+    previousTrajectories: boolean;
+    radioTransmissions: string[];
+  };
+  worldMemory: {
+    persistenceEnabled: boolean;
+    maxMemorySlots: number;
+  };
+  scientificDiscoveries: {
+    id: string;
+    title: string;
+    description: string;
+    scientificInsight: string; // Feynman-style explanation
+  }[];
+  rewards: {
+    xp: number;
+    badges: string[];
+  };
+  teacherNotes: string;
+  assessmentStrategy: string;
+  accessibilityNotes: string;
+  unlockConditions: {
+    minXP?: number;
+    prerequisites?: string[];
+  };
+  missionDuration: number; // in minutes
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
+  prerequisites: string[];
 }
 
 export type MissionStepType = 

@@ -5,9 +5,12 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useEngineStore, useSimulationStore } from "../../core/stores";
-import { getCurriculumPackById } from "../../content/registry";
-import ProjectileSim from "../simulations/ProjectileSim";
-import { MessageSquare, RefreshCw, Send, ChevronLeft, Award, HelpCircle, ShieldAlert, CheckCircle, HelpCircle as HelpIcon } from "lucide-react";
+import { getAllCurriculumPacks } from "../../content/registry";
+import { 
+  MessageSquare, RefreshCw, Send, ChevronLeft, Award, HelpCircle, 
+  ShieldAlert, CheckCircle, Play, ChevronRight, Compass, Atom, 
+  Beaker, BookOpen, Sparkles, LogIn 
+} from "lucide-react";
 import { globalEventBus } from "../../core/EventBus";
 
 export default function MissionActiveView() {
@@ -25,104 +28,114 @@ export default function MissionActiveView() {
     submitReflection,
     investigations,
     activeMisconceptions,
-    misconceptionDemoMode,
     triggerMisconceptionDemo,
     addMisconception,
-    removeMisconception
+    removeMisconception,
+    activeStepIndex,
+    setStepIndex,
+    nextStep,
+    prevStep,
+    unlockBadge,
+    unlockedBadges
   } = useEngineStore();
 
   const { isPlaying, setPlaying } = useSimulationStore();
 
-  // Load mission from registry
-  const pack = getCurriculumPackById("physics-class-11");
-  const mission = pack?.chapters[0]?.missions.find((m) => m.id === activeMissionId);
+  // 1. Dynamic Subject Resolution
+  const packs = getAllCurriculumPacks();
+  const pack = packs.find((p) => p.chapters.some((ch) => ch.missions.some((m) => m.id === activeMissionId))) || packs[0];
+  const chapter = pack.chapters.find((ch) => ch.missions.some((m) => m.id === activeMissionId)) || pack.chapters[0];
+  const mission = chapter.missions.find((m) => m.id === activeMissionId) || chapter.missions[0];
 
-  // Flight Ingress Boot Sequence
+  // 2. Flight Ingress Boot Sequence
   const [bootCompleted, setBootCompleted] = useState(false);
   const [bootProgress, setBootProgress] = useState(0);
 
-  // Telemetry Logs database (Empirical Observation logbook list)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!bootCompleted) {
+      interval = setInterval(() => {
+        setBootProgress((prev) => {
+          if (prev >= 100) {
+            setBootCompleted(true);
+            clearInterval(interval);
+            return 100;
+          }
+          return prev + 5;
+        });
+      }, 40);
+    }
+    return () => clearInterval(interval);
+  }, [bootCompleted]);
+
+  // 3. Dynamic Local Simulator Variables
+  const [simParameters, setSimParameters] = useState<Record<string, number>>({});
   const [launches, setLaunches] = useState<Array<{
     id: number;
-    velocity: number;
-    angle: number;
-    gravity: number;
-    peakHeight: number;
-    impactX: number;
-    status: "SECURED" | "CRASHED" | "UNDERSHOT" | "OVERSHOT";
+    params: Record<string, number>;
+    outcomeValue: number;
+    outcomeLabel: string;
+    status: "SECURED" | "CRASHED" | "UNDERSHOT" | "OVERSHOT" | "BALANCED" | "OUTRAGED" | "TRAGIC" | "STABLE";
   }>>([]);
 
-  // Ballistic Launcher controls (Martian Gravity = 3.72 m/s²)
-  const [velocity, setVelocity] = useState(55); // Pre-align with a reasonable closer starting value
-  const [angle, setAngle] = useState(45);
-  const [gravity, setGravity] = useState(3.72);
+  // Initialize default values when mission changes
+  useEffect(() => {
+    if (mission) {
+      const defaults: Record<string, number> = {};
+      mission.experimentFlow.parameters.forEach((p) => {
+        defaults[p.name] = p.defaultValue;
+      });
+      setSimParameters(defaults);
+      setLaunches([]);
+    }
+  }, [activeMissionId, mission]);
 
-  // Cognitive local states
-  const [cargoMass, setCargoMass] = useState(100); // 100 = Wood, 500 = Iron, 10 = Lithium Battery
+  // 4. Cognitive Rationale & Reflection local states
   const [rationaleText, setRationaleText] = useState("");
   const [reflectionText, setReflectionText] = useState("");
-  const [selectedPresetRationale, setSelectedPresetRationale] = useState<string>("");
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
 
-  // Socratic AI Guide state
+  const isDualMassActive = activeMisconceptions.includes("MISCONCEPTION_MASS_DEPENDENT_GRAVITY") || 
+                           selectedPresetId === "mass-float" || 
+                           selectedPresetId === "mass-heavy";
+
+  // 5. Socratic AI Mentor state
   const [selectedMentor, setSelectedMentor] = useState("GALILEO");
   const [aiInput, setAiInput] = useState("");
-  const [chatLog, setChatLog] = useState<Array<{ sender: "USER" | "MENTOR"; text: string }>>([
-    {
-      sender: "MENTOR",
-      text: "Greetings, cadet. I am Galileo Galilei. How can I guide you to trace the perfect arc of our supply canister through the thin Martian sky?"
-    }
-  ]);
-  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [chatLog, setChatLog] = useState<Array<{ sender: "USER" | "MENTOR"; text: string }>>([]);
 
-  // Mission Landing / Impact Debrief overlay states
-  const [debriefState, setDebriefState] = useState<{
-    show: boolean;
-    success: boolean;
-    impactX: number;
-    message: string;
-  }>({
-    show: false,
-    success: false,
-    impactX: 0,
-    message: ""
-  });
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Scroll chat log to bottom on updates
+  // Initialize mentor details based on active subject
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatLog, isAiThinking]);
+    if (mission) {
+      const initialMentor = mission.socraticMentorDialogue[0];
+      if (initialMentor) {
+        setSelectedMentor(initialMentor.avatar);
+        setChatLog([
+          {
+            sender: "MENTOR",
+            text: initialMentor.introductoryRemark
+          }
+        ]);
+      }
+    }
+  }, [mission]);
 
   // Mentor profile switcher info
-  const mentorsInfo: Record<string, { name: string; title: string; emoji: string; intro: string }> = {
-    GALILEO: {
-      name: "Galileo Galilei",
-      title: "Observational Astronomer",
-      emoji: "🔭",
-      intro: "Welcome, traveler. Let us ponder how a horizontal glide and a vertical fall create a beautiful curve of nature."
-    },
-    NEWTON: {
-      name: "Sir Isaac Newton",
-      title: "Mathematical Physicist",
-      emoji: "🍎",
-      intro: "Identify the impressed forces, student. Speak of gravity as a constant pull and let us compute the proportions."
-    },
-    FEYNMAN: {
-      name: "Dr. Richard Feynman",
-      title: "Quantum Educator",
-      emoji: "🥁",
-      intro: "Hey! Let's ignore dry calculations for a second and visualize what's actually happening at the top of that flight!"
-    }
+  const mentorsInfo: Record<string, { name: string; title: string; emoji: string }> = {
+    GALILEO: { name: "Galileo Galilei", title: "Observational Astronomer", emoji: "🔭" },
+    NEWTON: { name: "Sir Isaac Newton", title: "Mathematical Physicist", emoji: "🍎" },
+    FEYNMAN: { name: "Dr. Richard Feynman", title: "Quantum Educator", emoji: "🥁" },
+    CURIE: { name: "Marie Curie", title: "Nuclear Chemist", emoji: "🧪" },
+    SYSTEM: { name: "Hypatia of Alexandria", title: "System Dynamics Observer", emoji: "🏛️" }
   };
 
-  const handleMentorChange = (id: string) => {
-    setSelectedMentor(id);
-    const info = mentorsInfo[id] || mentorsInfo.GALILEO;
+  const handleMentorChange = (avatarId: string) => {
+    setSelectedMentor(avatarId);
+    const mDial = mission.socraticMentorDialogue.find(m => m.avatar === avatarId) || mission.socraticMentorDialogue[0];
     setChatLog([
       {
         sender: "MENTOR",
-        text: info.intro
+        text: mDial ? mDial.introductoryRemark : "Let us investigate the parameters of this system."
       }
     ]);
   };
@@ -145,676 +158,954 @@ export default function MissionActiveView() {
           query: userMsg,
           mentorId: selectedMentor,
           simulationState: {
-            x: 0,
-            y: 0,
-            velocity,
-            angle,
-            gravity
+            subject: mission.subject,
+            codename: mission.codename,
+            params: simParameters,
+            activeMisconceptions,
+            cognitiveState: cognitiveLoopState
           }
         })
       });
 
       const data = await response.json();
-      if (response.ok) {
-        setChatLog((prev) => [...prev, { sender: "MENTOR", text: data.response }]);
-        globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
-      } else {
-        setChatLog((prev) => [
-          ...prev,
-          { sender: "MENTOR", text: "Uplink disrupted. Let us reconsider the trajectory." }
-        ]);
-      }
+      const text = data.text || data.response || "No response recorded from system.";
+      setChatLog((prev) => [...prev, { sender: "MENTOR", text }]);
     } catch (err) {
-      console.error(err);
       setChatLog((prev) => [
         ...prev,
-        { sender: "MENTOR", text: "Minor telemetry drift. Check your internet coordinates and ask me again." }
-      ]);
-    } finally {
-      setIsAiThinking(false);
-    }
-  };
-
-  const handlePresetClick = async (text: string) => {
-    if (isAiThinking) return;
-    setChatLog((prev) => [...prev, { sender: "USER", text }]);
-    setIsAiThinking(true);
-
-    try {
-      const response = await fetch("/api/mentor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: text,
-          mentorId: selectedMentor,
-          simulationState: {
-            x: 0,
-            y: 0,
-            velocity,
-            angle,
-            gravity
-          }
-        })
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setChatLog((prev) => [...prev, { sender: "MENTOR", text: data.response }]);
-        globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
-      } else {
-        setChatLog((prev) => [
-          ...prev,
-          { sender: "MENTOR", text: "Uplink disrupted. Let us reconsider the trajectory." }
-        ]);
-      }
-    } catch (err) {
-      console.error(err);
-      setChatLog((prev) => [
-        ...prev,
-        { sender: "MENTOR", text: "Minor telemetry drift. Check your internet coordinates and ask me again." }
-      ]);
-    } finally {
-      setIsAiThinking(false);
-    }
-  };
-
-  // Boot loading timer interval
-  useEffect(() => {
-    if (bootCompleted) return;
-    const interval = setInterval(() => {
-      setBootProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
+        {
+          sender: "MENTOR",
+          text: "Sensor communication interrupted. Try framing your question using fundamental physical components."
         }
-        return prev + 5;
-      });
-    }, 80);
-    return () => clearInterval(interval);
-  }, [bootCompleted]);
+      ]);
+    } finally {
+      setIsAiThinking(false);
+    }
+  };
 
-  // Handle Projectile Impact Complete
-  const handleSimulationComplete = (success: boolean, finalRange: number) => {
-    setPlaying("PAUSED");
-    const roundedRange = Math.round(finalRange);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-    const angleRad = (angle * Math.PI) / 180;
-    const peakHeight = Math.round((velocity * Math.sin(angleRad)) ** 2 / (2 * gravity));
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatLog, isAiThinking]);
 
-    let status: "SECURED" | "CRASHED" | "UNDERSHOT" | "OVERSHOT" = "SECURED";
-    let message = "";
-    if (success) {
-      status = "SECURED";
-      message = `TARGET LOCKED & CARGO SECURED! The supply canister landed safely inside the recovery coordinate zone at ${roundedRange}m. The crew is fully resupplied. Excellent calculation.`;
-    } else {
-      if (roundedRange >= 340 && roundedRange <= 460) {
+  // Local helper for preset clicks
+  const handlePresetClick = (text: string) => {
+    setAiInput(text);
+  };
+
+  // 6. Mission Challenge Evaluator
+  const [debriefState, setDebriefState] = useState<{
+    show: boolean;
+    success: boolean;
+    outcomeValue: number;
+    outcomeLabel: string;
+    message: string;
+  }>({
+    show: false,
+    success: false,
+    outcomeValue: 0,
+    outcomeLabel: "",
+    message: ""
+  });
+
+  // 7. Interactive Physics/Chemistry/History/Lit CANVAS ENGINE
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [animationFrame, setAnimationFrame] = useState<number>(0);
+  const [simProgress, setSimProgress] = useState<number>(-1); // -1 = idle, 0 to 1 = active animating
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let width = canvas.width;
+    let height = canvas.height;
+
+    // Clear background
+    ctx.clearRect(0, 0, width, height);
+
+    // Apply soft cinematic dark grid
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < height; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    if (mission.coreInteraction === "PROJECTILE_AIMING") {
+      // Mars valley drawing
+      const angle = simParameters["angle"] || 45;
+      const velocity = simParameters["velocity"] || 55;
+      const gravity = simParameters["gravity"] || 3.72;
+
+      // Draw peak at 400m
+      ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(180, height);
+      ctx.lineTo(200, height - 120);
+      ctx.lineTo(220, height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.5)";
+      ctx.stroke();
+
+      ctx.fillStyle = "#ef4444";
+      ctx.font = "bold 9px monospace";
+      ctx.fillText("VOLCANIC PEAK (140m)", 150, height - 130);
+
+      // Draw landing zone between 780m and 820m
+      let zoneX1 = 780 * 0.5;
+      let zoneWidth = (820 - 780) * 0.5;
+      ctx.fillStyle = "rgba(16, 185, 129, 0.2)";
+      ctx.fillRect(zoneX1, height - 12, zoneWidth, 12);
+      ctx.strokeStyle = "#10b981";
+      ctx.strokeRect(zoneX1, height - 12, zoneWidth, 12);
+      ctx.fillStyle = "#10b981";
+      ctx.fillText("TARGET ZONE (780-820m)", zoneX1 - 25, height - 20);
+
+      // Launch Pad
+      ctx.fillStyle = "#06b6d4";
+      ctx.fillRect(10, height - 10, 20, 10);
+
+      // Draw launcher vector lines
+      const rad = (angle * Math.PI) / 180;
+      const vecX = 20 + Math.cos(rad) * 40;
+      const vecY = (height - 10) - Math.sin(rad) * 40;
+      ctx.strokeStyle = "#06b6d4";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(20, height - 10);
+      ctx.lineTo(vecX, vecY);
+      ctx.stroke();
+
+      // Dual Mass Cognitive HUD Overlay
+      if (isDualMassActive) {
+        ctx.fillStyle = "rgba(14, 165, 233, 0.08)";
+        ctx.fillRect(10, 15, 255, 34);
+        ctx.strokeStyle = "rgba(14, 165, 233, 0.25)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(10, 15, 255, 34);
+
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 8px monospace";
+        ctx.fillText("⚡ COGNITIVE MONITOR: DUAL-MASS COMPARATIVE LAUNCH", 15, 26);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "7px monospace";
+        ctx.fillText("Testing: wood crate (10kg) vs iron safe (500kg)", 15, 38);
+      }
+
+      // If animating launch
+      if (simProgress >= 0) {
+        let totalTime = (2 * velocity * Math.sin(rad)) / gravity;
+        let animatedTime = totalTime * simProgress;
+
+        if (isDualMassActive) {
+          // Draw trail of Canister A (Iron Safe - Steel Blue, drawn 4px lower for separation)
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = "rgba(14, 165, 233, 0.4)";
+          ctx.beginPath();
+          ctx.moveTo(20, height - 10);
+          for (let t = 0; t <= animatedTime; t += 0.05) {
+            let cx = 20 + velocity * Math.cos(rad) * t * 0.5;
+            let cy = (height - 10) - (velocity * Math.sin(rad) * t - 0.5 * gravity * t * t) * 0.5 + 4;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+
+          // Draw trail of Canister B (Wood Crate - Golden Amber, drawn 4px higher)
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+          ctx.beginPath();
+          ctx.moveTo(20, height - 10);
+          for (let t = 0; t <= animatedTime; t += 0.05) {
+            let cx = 20 + velocity * Math.cos(rad) * t * 0.5;
+            let cy = (height - 10) - (velocity * Math.sin(rad) * t - 0.5 * gravity * t * t) * 0.5 - 4;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+
+          // Draw active Canister A (Iron Safe - Steel Blue circle)
+          let curAX = 20 + velocity * Math.cos(rad) * animatedTime * 0.5;
+          let curAY = (height - 10) - (velocity * Math.sin(rad) * animatedTime - 0.5 * gravity * animatedTime * animatedTime) * 0.5 + 4;
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(curAX, curAY, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Draw active Canister B (Wood Crate - Golden circle)
+          let curBX = 20 + velocity * Math.cos(rad) * animatedTime * 0.5;
+          let curBY = (height - 10) - (velocity * Math.sin(rad) * animatedTime - 0.5 * gravity * animatedTime * animatedTime) * 0.5 - 4;
+          ctx.fillStyle = "#f59e0b";
+          ctx.beginPath();
+          ctx.arc(curBX, curBY, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Labels moving with objects
+          ctx.fillStyle = "#cbd5e1";
+          ctx.font = "bold 7px monospace";
+          ctx.fillText("⛓️ SAFE (500kg)", curAX + 8, curAY + 2);
+          ctx.fillText("📦 CRATE (10kg)", curBX + 8, curBY + 2);
+        } else {
+          // STANDARD SINGLE PROJECTILE DRAWING
+          ctx.fillStyle = "#f97316";
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = "rgba(249, 115, 22, 0.4)";
+          ctx.beginPath();
+          ctx.moveTo(20, height - 10);
+
+          for (let t = 0; t <= animatedTime; t += 0.05) {
+            let cx = 20 + velocity * Math.cos(rad) * t * 0.5;
+            let cy = (height - 10) - (velocity * Math.sin(rad) * t - 0.5 * gravity * t * t) * 0.5;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+
+          // Current payload canister drawing
+          let curX = 20 + velocity * Math.cos(rad) * animatedTime * 0.5;
+          let curY = (height - 10) - (velocity * Math.sin(rad) * animatedTime - 0.5 * gravity * animatedTime * animatedTime) * 0.5;
+          ctx.fillStyle = "#ea580c";
+          ctx.beginPath();
+          ctx.arc(curX, curY, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+        }
+      }
+
+      // Draw static result of last trial when idle
+      if (simProgress === -1 && launches.length > 0) {
+        const latestLaunch = launches[0];
+        const lAngle = latestLaunch.params["angle"] || 45;
+        const lVelocity = latestLaunch.params["velocity"] || 55;
+        const lGravity = latestLaunch.params["gravity"] || 3.72;
+        const lRad = (lAngle * Math.PI) / 180;
+
+        let totalTime = (2 * lVelocity * Math.sin(lRad)) / lGravity;
+        let landX = 20 + lVelocity * Math.cos(lRad) * totalTime * 0.5;
+        let landY = (height - 10) - (lVelocity * Math.sin(lRad) * totalTime - 0.5 * lGravity * totalTime * totalTime) * 0.5;
+
+        if (isDualMassActive) {
+          // Dual Trails
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 2]);
+
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";
+          ctx.beginPath();
+          ctx.moveTo(20, height - 10);
+          for (let t = 0; t <= totalTime; t += 0.05) {
+            let cx = 20 + lVelocity * Math.cos(lRad) * t * 0.5;
+            let cy = (height - 10) - (lVelocity * Math.sin(lRad) * t - 0.5 * lGravity * t * t) * 0.5 + 4;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.25)";
+          ctx.beginPath();
+          ctx.moveTo(20, height - 10);
+          for (let t = 0; t <= totalTime; t += 0.05) {
+            let cx = 20 + lVelocity * Math.cos(lRad) * t * 0.5;
+            let cy = (height - 10) - (lVelocity * Math.sin(lRad) * t - 0.5 * lGravity * t * t) * 0.5 - 4;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Landed Iron Safe
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(landX, landY + 4, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+
+          // Landed Wood Crate
+          ctx.fillStyle = "#f59e0b";
+          ctx.beginPath();
+          ctx.arc(landX, landY - 4, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+
+          ctx.fillStyle = "#a7f3d0";
+          ctx.font = "bold 8px monospace";
+          ctx.fillText("🎯 BOTH MASSES LANDED SIMULTANEOUSLY!", landX - 60, landY - 14);
+        } else {
+          // Standard Single Trail
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(20, height - 10);
+          for (let t = 0; t <= totalTime; t += 0.05) {
+            let cx = 20 + lVelocity * Math.cos(lRad) * t * 0.5;
+            let cy = (height - 10) - (lVelocity * Math.sin(lRad) * t - 0.5 * lGravity * t * t) * 0.5;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = latestLaunch.status === "SECURED" ? "#10b981" : "#ef4444";
+          ctx.beginPath();
+          ctx.arc(landX, landY, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+        }
+      }
+    } else if (mission.coreInteraction === "TITRATION_BALANCE") {
+      // Chemistry Titration setup drawing
+      const baseMolar = simParameters["baseMolarity"] || 0.1;
+      const dripVol = simParameters["dripVolume"] || 30;
+
+      // Beaker drawing
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(180, height - 10);
+      ctx.lineTo(180, height - 80);
+      ctx.moveTo(180, height - 10);
+      ctx.lineTo(260, height - 10);
+      ctx.lineTo(260, height - 80);
+      ctx.stroke();
+
+      // Resolve beaker fluid color based on pH logic
+      // Moles of Acid (50 mL of 0.1 M HCl) = 0.005
+      const acidVol = 50;
+      const addedL = dripVol / 1000;
+      const molesOH = addedL * baseMolar;
+      let pH = 1.0;
+      if (molesOH < 0.005) {
+        const remainingH = 0.005 - molesOH;
+        const totalVolL = (acidVol + dripVol) / 1000;
+        pH = -Math.log10(remainingH / totalVolL);
+      } else if (molesOH === 0.005) {
+        pH = 7.0;
+      } else {
+        const excessOH = molesOH - 0.005;
+        const totalVolL = (acidVol + dripVol) / 1000;
+        const pOH = -Math.log10(excessOH / totalVolL);
+        pH = 14 - pOH;
+      }
+
+      // Smooth color transitions
+      let fillStyle = "rgba(239, 68, 68, 0.4)"; // Acid Pink
+      if (pH >= 6.5 && pH <= 7.5) {
+        fillStyle = "rgba(16, 185, 129, 0.5)"; // Neutral Green
+      } else if (pH > 7.5) {
+        fillStyle = "rgba(59, 130, 246, 0.5)"; // Alkaline Blue
+      }
+
+      ctx.fillStyle = fillStyle;
+      ctx.fillRect(182, height - 45, 76, 34);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 10px monospace";
+      ctx.fillText(`pH: ${pH.toFixed(2)}`, 195, height - 25);
+
+      // Burette at top
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(220, 10);
+      ctx.lineTo(220, height - 120);
+      ctx.stroke();
+
+      // Drip nozzle
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillRect(217, height - 120, 6, 10);
+
+      // Droplet animation
+      if (simProgress >= 0) {
+        let dripY = (height - 110) + (height - 45 - (height - 110)) * (simProgress % 0.2) / 0.2;
+        if (dripY < height - 45) {
+          ctx.fillStyle = "#60a5fa";
+          ctx.beginPath();
+          ctx.arc(220, dripY, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (mission.coreInteraction === "DECISION_TIMELINE") {
+      // History Bastille drawing
+      const garrison = simParameters["garrisonSize"] || 100;
+      const price = simParameters["breadPrice"] || 15;
+      const outrage = (price * garrison) / 1.5;
+
+      // Draw Bastille castle outline
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(160, height - 130, 180, 120);
+
+      // Towers
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(140, height - 140, 40, 130);
+      ctx.fillRect(320, height - 140, 40, 130);
+
+      // Gate
+      ctx.fillStyle = outrage > 1000 ? "rgba(220, 38, 38, 0.15)" : "#0f172a";
+      ctx.fillRect(220, height - 50, 60, 50);
+      ctx.strokeStyle = outrage > 1000 ? "#ef4444" : "#475569";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(220, height - 50, 60, 50);
+
+      // Crowd
+      ctx.fillStyle = "#f97316";
+      let numPeople = Math.min(30, Math.floor(outrage / 40) + 5);
+      for (let i = 0; i < numPeople; i++) {
+        let px = 20 + (i * 11) % 110;
+        let py = height - 10 - (i % 3) * 5;
+        // Draw torch
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(px, py - 10, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f97316";
+        ctx.fillRect(px - 1, py - 8, 2, 8);
+      }
+
+      // Dynamic warning labels
+      ctx.fillStyle = outrage > 1000 ? "#ef4444" : "#e2e8f0";
+      ctx.font = "bold 9px monospace";
+      ctx.fillText(`OUTRAGE: ${Math.min(100, outrage / 15).toFixed(0)}%`, 30, 30);
+
+      if (simProgress >= 0) {
+        // Draw flying torches
+        let startX = 60;
+        let startY = height - 15;
+        let endX = 220;
+        let endY = height - 60;
+        let curX = startX + (endX - startX) * simProgress;
+        let curY = startY + (endY - startY) * simProgress - Math.sin(simProgress * Math.PI) * 40;
+
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.arc(curX, curY, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (mission.coreInteraction === "THEMATIC_ANALYSIS") {
+      // Literature Frankenstein Gothic lab
+      const ambition = simParameters["ambitionLevel"] || 80;
+      const resp = simParameters["responsibilityLevel"] || 20;
+      const tragedy = (ambition * 100) / (resp + 1);
+
+      // Draw lab gothic window
+      ctx.strokeStyle = "rgba(168, 85, 247, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(50, 20, 100, 120);
+      ctx.beginPath();
+      ctx.arc(100, 20, 50, 0, Math.PI, true);
+      ctx.stroke();
+
+      // Slab with a laying humanoid outline
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(180, height - 40, 140, 12);
+      ctx.fillStyle = "rgba(168, 85, 247, 0.2)";
+      ctx.fillRect(190, height - 55, 120, 15);
+
+      // Galvanic spark wires
+      ctx.strokeStyle = "#a855f7";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(100, 140);
+      ctx.lineTo(190, height - 50);
+      ctx.stroke();
+
+      // Render lightning strike on active animation
+      if (simProgress >= 0) {
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#a855f7";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(100, 20);
+        ctx.lineTo(110, 60);
+        ctx.lineTo(90, 100);
+        ctx.lineTo(200, height - 50);
+        ctx.stroke();
+        ctx.shadowBlur = 0; // reset
+      }
+
+      ctx.fillStyle = tragedy > 2000 ? "#c084fc" : "#94a3b8";
+      ctx.font = "bold 9px monospace";
+      ctx.fillText(`TRAGIC INDEX: ${Math.min(100, tragedy / 30).toFixed(0)}%`, 30, 30);
+    }
+  }, [simParameters, simProgress, animationFrame, activeMissionId, mission, selectedPresetId, activeMisconceptions, launches]);
+
+  // 8. Trigger Simulation & Experiment Logic
+  const runSimulation = () => {
+    if (simProgress >= 0) return; // already running
+    setSimProgress(0);
+    globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "HUM" } });
+
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 0.02;
+      setSimProgress(p);
+      setAnimationFrame(Date.now());
+
+      if (p >= 1.0) {
+        clearInterval(interval);
+        setSimProgress(-1);
+        evaluateExperimentOutcome();
+      }
+    }, 40);
+  };
+
+  const evaluateExperimentOutcome = () => {
+    // Collect factors based on active simulator
+    let isSuccess = false;
+    let val = 0;
+    let label = "";
+    let status: "SECURED" | "CRASHED" | "UNDERSHOT" | "OVERSHOT" | "BALANCED" | "OUTRAGED" | "TRAGIC" | "STABLE" = "BALANCED";
+
+    if (mission.coreInteraction === "PROJECTILE_AIMING") {
+      const angle = simParameters["angle"] || 45;
+      const velocity = simParameters["velocity"] || 55;
+      const gravity = simParameters["gravity"] || 3.72;
+      const rad = (angle * Math.PI) / 180;
+
+      // Projectile Range = (v_0^2 * sin(2*theta)) / g
+      let range = (velocity * velocity * Math.sin(2 * rad)) / gravity;
+      val = Math.round(range);
+      label = `${val}m Range`;
+
+      // Check peak clearance at x = 400m
+      // y(400) = 400 * tan(theta) - (g * 400^2) / (2 * v_0^2 * cos^2(theta))
+      let yPeak = 400 * Math.tan(rad) - (gravity * 160000) / (2 * velocity * velocity * Math.cos(rad) * Math.cos(rad));
+
+      if (yPeak < 140) {
         status = "CRASHED";
-        message = `CRITICAL DEBRIS IMPACT! Supply crate struck the Tharsis Ridge mountain peak at ${roundedRange}m coordinates. Altitude failed to clear the 140-meter mountain peak limit. Crate disintegrated.`;
-      } else if (roundedRange < 780) {
+        isSuccess = false;
+        label = "Crashed on Ridge (Apex too low)";
+      } else if (val >= 780 && val <= 820) {
+        status = "SECURED";
+        isSuccess = true;
+      } else if (val < 780) {
         status = "UNDERSHOT";
-        message = `DISTANT MISCALIBRATION. Canister landed far too short at ${roundedRange}m. Supplies dropped in deep cryogenic dunes. Out of life-support recovery bounds.`;
       } else {
         status = "OVERSHOT";
-        message = `BALLISTIC OVERFLOW. Canister overshot target zone, impacting at ${roundedRange}m. supplies crashed into the Tharsis canyon. Recovery impossible.`;
+      }
+    } else if (mission.coreInteraction === "TITRATION_BALANCE") {
+      const baseMolar = simParameters["baseMolarity"] || 0.1;
+      const dripVol = simParameters["dripVolume"] || 30;
+      const molesOH = (dripVol / 1000) * baseMolar;
+
+      // Target pH is exactly 7.0 (equivalence moles is 0.005)
+      val = Number(dripVol.toFixed(1));
+      label = `added ${val}mL base`;
+
+      if (molesOH >= 0.0048 && molesOH <= 0.0052) {
+        status = "BALANCED";
+        isSuccess = true;
+      } else if (molesOH < 0.0048) {
+        status = "UNDERSHOT";
+      } else {
+        status = "OVERSHOT";
+      }
+    } else if (mission.coreInteraction === "DECISION_TIMELINE") {
+      const garrison = simParameters["garrisonSize"] || 100;
+      const price = simParameters["breadPrice"] || 15;
+      const outrage = (price * garrison) / 1.5;
+
+      val = Math.round(outrage);
+      label = `Outrage Score: ${val}`;
+
+      if (outrage > 1000) {
+        status = "OUTRAGED";
+        isSuccess = true; // Historical storming triggered!
+      } else {
+        status = "STABLE";
+      }
+    } else if (mission.coreInteraction === "THEMATIC_ANALYSIS") {
+      const ambition = simParameters["ambitionLevel"] || 80;
+      const resp = simParameters["responsibilityLevel"] || 20;
+      const tragedy = (ambition * 100) / (resp + 1);
+
+      val = Math.round(tragedy);
+      label = `Tragic Warning Index: ${val}`;
+
+      if (tragedy > 3000) {
+        status = "TRAGIC";
+        isSuccess = true; // Cautionary tale peak successfully analyzed!
+      } else {
+        status = "STABLE";
       }
     }
 
-    setLaunches((prev) => [
-      {
-        id: prev.length + 1,
-        velocity,
-        angle,
-        gravity,
-        peakHeight,
-        impactX: roundedRange,
-        status
-      },
-      ...prev
-    ]);
-
-    // Commit to Cognitive State Engine
-    commitExperimentResult({
-      impactX: roundedRange,
-      peakHeight,
-      angle,
-      gravity,
-      mass: cargoMass,
-      message,
+    // Save trial outcome in telemetry list
+    const newLaunch = {
+      id: launches.length + 1,
+      params: { ...simParameters },
+      outcomeValue: val,
+      outcomeLabel: label,
       status
-    }, success);
+    };
+
+    setLaunches((prev) => [newLaunch, ...prev]);
+
+    // Track in central Zustand store
+    commitExperimentResult({ telemetry: { finalValue: val, status }, isSuccess }, isSuccess);
+
+    // If we are in final challenge step, show debrief modal!
+    if (activeStepIndex === 3) {
+      let descMessage = "";
+      if (isSuccess) {
+        descMessage = mission.steps[4]?.content.narrative || "Excellent work operator, parameters hit targets!";
+        globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "SUCCESS" } });
+      } else {
+        descMessage = mission.failureBehaviors.radioTransmissions[Math.floor(Math.random() * mission.failureBehaviors.radioTransmissions.length)] || "Calibrations out of bounce. Recalibrate sensory indicators.";
+        globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "FAILURE" } });
+      }
+
+      setDebriefState({
+        show: true,
+        success: isSuccess,
+        outcomeValue: val,
+        outcomeLabel: label,
+        message: descMessage
+      });
+    }
   };
 
   const handleDismissDebrief = () => {
-    setDebriefState((prev) => ({ ...prev, show: false }));
+    setDebriefState(prev => ({ ...prev, show: false }));
+    if (debriefState.success) {
+      // Award XP, Unlock badge, move to next step!
+      awardXP(mission.rewards.xp);
+      completeMission(mission.id);
+      
+      const badge = mission.successConditions.badgeUnlocked;
+      if (badge) {
+        unlockBadge(badge.id, badge.name);
+      }
+      nextStep(mission.steps.length);
+    }
   };
 
-  if (!bootCompleted) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[500px] p-4 relative">
-        <div className="w-full max-w-xl p-6 sm:p-8 rounded-3xl border border-cyan-500/20 bg-gray-950/80 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col gap-6 font-mono text-xs select-none">
-          {/* Neon grid decorative overlay */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(6,182,212,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(6,182,212,0.01)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-          <div className="absolute -top-32 -left-32 w-64 h-64 bg-cyan-500/5 blur-3xl pointer-events-none animate-pulse" />
-
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-cyan-500/20 pb-4">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
-              <span className="font-bold tracking-widest text-[10px] uppercase">COGNITIVE COCKPIT CONSOLE DECK v2.4</span>
-            </div>
-            <span className="text-gray-500 text-[10px]">THARSIS COURIER SYSTEM</span>
-          </div>
-
-          {/* Terminal output lines */}
-          <div className="flex-1 flex flex-col gap-2.5 bg-black/45 p-4 rounded-xl border border-white/5 min-h-[220px] justify-end">
-            {bootProgress >= 5 && (
-              <p className="text-cyan-500/70 animate-pulse">📡 INCOMING ENCRYPTED COMM TRANSMISSION... [SOURCE: THARSIS STATION]</p>
-            )}
-            {bootProgress >= 25 && (
-              <p className="text-gray-400">⚡ INITIALIZING COILS & ELECTROMAGNETIC INJECTORS... <span className="text-cyan-400 font-bold">[ONLINE]</span></p>
-            )}
-            {bootProgress >= 50 && (
-              <p className="text-gray-400">🌍 DETECTING GRAVITY FLUX FIELD: Mars Tharsis Basin (<span className="text-emerald-400 font-bold">g = 3.72 m/s²</span>) <span className="text-cyan-400 font-bold">[RESOLVED]</span></p>
-            )}
-            {bootProgress >= 75 && (
-              <p className="text-gray-400">🔭 ESTABLISHING HIGH-FIDELITY SOCRATIC INTERCEPTOR... <span className="text-cyan-400 font-bold">[ACTIVE]</span></p>
-            )}
-            {bootProgress >= 95 && (
-              <p className="text-emerald-400 font-bold animate-pulse">▶ TELEMETRY RECEPTOR INTEGRATED. STANDBY FOR COCKPIT IMMERSION...</p>
-            )}
-          </div>
-
-          {/* Progress loader */}
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-[10px] text-gray-500">
-              <span>ESTABLISHING QUANTUM PATHWAY</span>
-              <span className="text-cyan-400 font-bold">{bootProgress}%</span>
-            </div>
-            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-100"
-                style={{ width: `${bootProgress}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Engage trigger */}
-          <button
-            onClick={() => {
-              if (bootProgress < 100) return;
-              setBootCompleted(true);
-              globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "SUCCESS" } });
-            }}
-            disabled={bootProgress < 100}
-            className={`w-full py-3 rounded-2xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              bootProgress === 100
-                ? "bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.45)] scale-100 animate-pulse"
-                : "bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed scale-98"
-            }`}
-          >
-            ENGAGE FLIGHT CONSOLE
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!mission) {
-    return (
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 text-center font-mono text-gray-500">
-        Aligning sensors. Mission payload missing...
-      </div>
-    );
-  }
-
   return (
-    <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 flex flex-col gap-6 relative select-none">
-      {/* Flight Control Back Button */}
-      <button
-        onClick={() => setView("mission-details")}
-        className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-[11px] font-mono text-gray-400 hover:text-white flex items-center gap-1.5 transition-all self-start border border-white/5 active:scale-95 z-10"
-      >
-        <ChevronLeft size={13} /> ESCAPE TO MISSION DECK
-      </button>
+    <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 relative flex flex-col gap-6">
+      
+      {/* 1. Header Navigation HUD Rail */}
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <button
+          onClick={() => {
+            setView("mission-details");
+            globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+          }}
+          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] font-mono text-gray-400 hover:text-white border border-white/5 transition-all flex items-center gap-1.5 active:scale-95"
+        >
+          <ChevronLeft size={12} /> ABORT TO MISSION PROFILE
+        </button>
 
-      {/* Main Grid: Sandbox Canvas + Left Control HUD + Right AI Companion */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-        {/* Left Side (Col 1): Live Mission Parameters, Codename briefs and adjustments */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          {/* Brief Card */}
-          <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl flex flex-col gap-3">
-            <div className="flex flex-col">
-              <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
-                ACTIVE MISSION brief
+        {/* Mission Step/Lifecycle Segment Progress Indicator */}
+        <div className="hidden md:flex items-center gap-1 font-mono text-[9px] text-gray-500">
+          {mission.steps.map((st, i) => (
+            <React.Fragment key={st.id}>
+              {i > 0 && <span className="px-1 text-gray-700">➔</span>}
+              <span className={`px-2 py-0.5 rounded ${
+                activeStepIndex === i 
+                  ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold" 
+                  : i < activeStepIndex 
+                  ? "text-emerald-400 font-medium" 
+                  : "text-gray-600"
+              }`}>
+                {st.type}
               </span>
-              <h3 className="font-display font-bold text-white text-base mt-0.5">{mission.title}</h3>
-            </div>
-
-            <p className="text-xs text-gray-400 leading-relaxed">{mission.description}</p>
-
-            <div className="flex items-center gap-2 font-mono text-[9px] text-gray-500 border-t border-white/5 pt-3">
-              <span>GRAVITY FIELD:</span>
-              <span className="text-cyan-400 font-bold">MARTIAN (3.72 m/s²)</span>
-            </div>
-          </div>
-
-          {/* Calibrator Controller Sliders */}
-          <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl flex flex-col gap-4 relative">
-            {cognitiveLoopState !== "PREDICT" && (
-              <div className="absolute inset-0 bg-gray-950/80 rounded-2xl flex flex-col items-center justify-center p-4 text-center z-20 backdrop-blur-sm">
-                <span className="font-mono text-[9px] text-orange-400 font-bold uppercase tracking-widest animate-pulse">🔒 Launcher Controls Locked</span>
-                <p className="text-[10px] text-gray-400 mt-1 max-w-[150px]">
-                  Calibrations are locked during the experimental and reflection phases.
-                </p>
-              </div>
-            )}
-            
-            <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest border-b border-white/5 pb-2">
-              Launcher Calibration
-            </span>
-
-            {/* Launch velocity (v0) slider */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between font-mono text-xs">
-                <span className="text-gray-400">Launch Speed ($v_0$):</span>
-                <span className="text-cyan-400 font-bold">{velocity} m/s</span>
-              </div>
-              <input
-                type="range"
-                min={30}
-                max={150}
-                value={velocity}
-                disabled={cognitiveLoopState !== "PREDICT"}
-                onChange={(e) => setVelocity(parseInt(e.target.value, 10))}
-                className="accent-cyan-400 h-1 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40"
-              />
-              <span className="font-mono text-[8px] text-gray-500 text-right">Range: 30 - 150 m/s</span>
-            </div>
-
-            {/* Elevation Angle (theta) slider */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between font-mono text-xs">
-                <span className="text-gray-400">Launch Angle ($\theta$):</span>
-                <span className="text-orange-400 font-bold">{angle}°</span>
-              </div>
-              <input
-                type="range"
-                min={10}
-                max={85}
-                value={angle}
-                disabled={cognitiveLoopState !== "PREDICT"}
-                onChange={(e) => setAngle(parseInt(e.target.value, 10))}
-                className="accent-orange-400 h-1 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40"
-              />
-              <span className="font-mono text-[8px] text-gray-500 text-right">Range: 10° - 85°</span>
-            </div>
-
-            {/* Simulated Martian Gravity slider */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between font-mono text-xs">
-                <span className="text-gray-400">Martian Gravity ($g$):</span>
-                <span className="text-emerald-400 font-bold">{gravity} m/s²</span>
-              </div>
-              <input
-                type="range"
-                min={1.0}
-                max={9.8}
-                step={0.1}
-                value={gravity}
-                disabled={cognitiveLoopState !== "PREDICT"}
-                onChange={(e) => setGravity(parseFloat(e.target.value))}
-                className="accent-emerald-400 h-1 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40"
-              />
-              <span className="font-mono text-[8px] text-gray-500 text-right">Standard Mars: 3.72 m/s²</span>
-            </div>
-          </div>
-
-          {/* TELEMETRY OBSERVATIONS LOGBOOK (Ledger) */}
-          <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl flex flex-col gap-3">
-            <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest border-b border-white/5 pb-2 flex justify-between items-center">
-              <span>Historical Telemetry Log</span>
-              <span className="text-[8px] text-gray-500 font-normal">Empirical Records</span>
-            </span>
-
-            {launches.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-[10px] font-mono text-gray-500 italic text-center py-6 border border-dashed border-white/5 rounded-xl bg-black/25">
-                No telemetry drops logged yet. Launch a canister to log calculations.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-1">
-                <table className="w-full font-mono text-[9px] text-left">
-                  <thead>
-                    <tr className="text-gray-500 border-b border-white/5 pb-1">
-                      <th className="font-normal py-1">DROP</th>
-                      <th className="font-normal py-1">VEL (v₀)</th>
-                      <th className="font-normal py-1">ANG (θ)</th>
-                      <th className="font-normal py-1">APEX (h)</th>
-                      <th className="font-normal py-1">RANGE (R)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {launches.map((l) => (
-                      <tr key={l.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                        <td className="py-1 text-gray-400">#0{l.id}</td>
-                        <td className="py-1 text-cyan-400">{l.velocity}m/s</td>
-                        <td className="py-1 text-orange-400">{l.angle}°</td>
-                        <td className="py-1 text-amber-500">{l.peakHeight}m</td>
-                        <td className={`py-1 font-bold ${
-                          l.status === "SECURED" 
-                            ? "text-emerald-400" 
-                            : l.status === "CRASHED"
-                            ? "text-red-400"
-                            : "text-orange-500"
-                        }`}>
-                          {l.impactX}m
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            </React.Fragment>
+          ))}
         </div>
 
-        {/* Center Canvas Stage (Col 2 & 3): Displays Interactive Physics Sandbox & Replays */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          <ProjectileSim
-            velocity={velocity}
-            angle={angle}
-            gravity={gravity}
-            isChallengeMode={true}
-            targetRange={{ min: 780, max: 820 }}
-            onChallengeComplete={handleSimulationComplete}
-            onControlsChange={(vel, ang) => {
-              if (cognitiveLoopState === "PREDICT") {
-                setVelocity(vel);
-                setAngle(ang);
-              }
-            }}
-          />
+        {/* Mission Level indicator */}
+        <div className="font-mono text-[9px] text-gray-400 bg-gray-950/60 px-3 py-1.5 border border-white/5 rounded-xl flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span>SYS STATE: ACTIVE</span>
+        </div>
+      </div>
 
-          {/* DYNAMIC COGNITIVE LOOP CONSOLE */}
-          <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/75 backdrop-blur-xl flex flex-col gap-4 relative overflow-hidden">
-            {/* Ambient indicator lights */}
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-500 via-cyan-500 to-emerald-500" />
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${
-                  cognitiveLoopState === "PREDICT" 
-                    ? "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)] animate-pulse" 
-                    : cognitiveLoopState === "EXPERIMENT"
-                    ? "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]"
-                    : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse"
-                }`} />
-                <span className="font-mono text-[10px] font-bold tracking-widest text-white uppercase">
-                  ACTIVE PHASE: {cognitiveLoopState}
-                </span>
-              </div>
-              <span className="font-mono text-[9px] font-medium text-gray-500">COGNITIVE COOP SYSTEM</span>
-            </div>
-
-            {/* --- PHASE 1: PREDICT --- */}
-            {cognitiveLoopState === "PREDICT" && (
-              <div className="flex flex-col gap-3">
-                <div className="p-3.5 rounded-xl border border-orange-500/10 bg-orange-500/5 flex flex-col gap-1 text-xs">
-                  <span className="font-bold text-orange-400">Step 1: Predict Landing & Write Your Hypothesis</span>
-                  <p className="text-gray-400 text-[11px] leading-relaxed">
-                    Adjust launch velocity and elevation angle using the sliders or by dragging the railgun barrel directly. 
-                    Then, <strong className="text-orange-400">click/tap the canvas floor</strong> to drop your orange 🚩 Predicted Landing Flag.
-                  </p>
+      {/* 2. Interactive Mission Step Routing View */}
+      {(() => {
+        // --- STEP ROUTING: BRIEFING ---
+        if (mission.steps[activeStepIndex]?.type === "BRIEFING") {
+          const briefing = mission.steps[activeStepIndex];
+          return (
+            <div className="flex-1 max-w-3xl mx-auto w-full py-8 flex flex-col gap-6 animate-in fade-in duration-300">
+              <div className="p-8 rounded-3xl border border-white/10 bg-gray-950/50 backdrop-blur-xl relative overflow-hidden flex flex-col gap-6">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/[0.02] blur-3xl" />
+                
+                <div className="flex flex-col gap-1 border-b border-white/5 pb-4">
+                  <span className="font-mono text-[9px] text-cyan-400 font-bold tracking-widest uppercase">
+                    {mission.codename} • CRISIS DEPLOYMENT
+                  </span>
+                  <h2 className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight leading-none mt-1">
+                    {briefing.title}
+                  </h2>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="font-mono text-[10px] text-orange-400 font-bold uppercase tracking-wider">Select Rationale or Type Hypothesis:</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {[
-                      { id: "opt1", label: "📦 Lighter Lithium is buoyant, so it travels further", isMisconception: true },
-                      { id: "opt2", label: "⛓️ Heavy Iron Safe falls much faster under Mars gravity", isMisconception: true },
-                      { id: "opt3", label: "⚖️ Gravity is independent of mass; the arc will be identical", isCorrectDiscovery: true },
-                      { id: "opt4", label: "📐 45° splits horizontal & vertical velocities equally for peak distance" }
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPresetRationale(opt.label);
-                          setRationaleText(opt.label);
-                          if (opt.isMisconception) {
-                            addMisconception("MISCONCEPTION_MASS_DEPENDENT_GRAVITY");
-                          } else {
-                            removeMisconception("MISCONCEPTION_MASS_DEPENDENT_GRAVITY");
-                          }
-                          globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
-                        }}
-                        className={`p-2.5 rounded-lg border text-[10px] text-left font-sans transition-all flex items-start gap-2 ${
-                          selectedPresetRationale === opt.label
-                            ? "bg-orange-500/10 border-orange-500 text-orange-200 shadow-sm"
-                            : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10"
-                        }`}
-                      >
-                        <span className="mt-0.5">{selectedPresetRationale === opt.label ? "🟢" : "⚫"}</span>
-                        <span>{opt.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="prose prose-invert max-w-none text-gray-300 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                  {briefing.content.narrative}
+                </div>
 
-                  <input
-                    type="text"
-                    value={rationaleText}
-                    onChange={(e) => setRationaleText(e.target.value)}
-                    placeholder="Describe your physical intuition..."
-                    className="mt-2 w-full px-3 py-2 text-xs text-white bg-black/40 border border-white/10 rounded-lg focus:outline-none focus:border-orange-500/40"
-                  />
+                {/* Checklist learning target blocks */}
+                <div className="p-5 rounded-2xl border border-white/5 bg-black/35 font-mono text-xs text-gray-400 flex flex-col gap-3">
+                  <span className="text-white text-[10px] font-bold tracking-wider uppercase">Active Learning Targets:</span>
+                  {mission.learningObjectives.map((obj, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <span className="text-cyan-400 font-bold">✔</span>
+                      <span>{obj}</span>
+                    </div>
+                  ))}
                 </div>
 
                 <button
-                  type="button"
-                  onClick={() => {
-                    if (predictionFlagX === null) return;
-                    commitPrediction(angle, velocity, rationaleText || "No custom rationale entered.");
-                    globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
-                  }}
-                  disabled={predictionFlagX === null}
-                  className={`w-full py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
-                    predictionFlagX !== null
-                      ? "bg-orange-500 hover:bg-orange-400 text-black shadow-[0_0_15px_rgba(249,115,22,0.35)] cursor-pointer"
-                      : "bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed"
-                  }`}
+                  onClick={() => nextStep(mission.steps.length)}
+                  className="w-full mt-2 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
                 >
-                  {predictionFlagX === null 
-                    ? "🚩 CHOOSE LANDING FLAG ON GROUND TO COMMIT" 
-                    : "🔒 LOCK HYPOTHESIS & POWER ELEVATION MAGNETS"}
+                  ESTABLISH COMMUNICATIONS LINK <ChevronRight size={14} />
                 </button>
               </div>
-            )}
+            </div>
+          );
+        }
 
-            {/* --- PHASE 2: EXPERIMENT --- */}
-            {cognitiveLoopState === "EXPERIMENT" && (
-              <div className="flex flex-col gap-3">
-                <div className="p-3.5 rounded-xl border border-cyan-500/10 bg-cyan-500/5 flex flex-col gap-1 text-xs">
-                  <span className="font-bold text-cyan-400">Step 2: Run the Experiment</span>
-                  <p className="text-gray-400 text-[11px] leading-relaxed">
-                    The calibration values are locked! Launch the cargo capsule using the control system below and monitor 
-                    the real-time gravity vectors in the telemetry cockpit.
-                  </p>
+        // --- STEP ROUTING: DIALOGUE ---
+        if (mission.steps[activeStepIndex]?.type === "DIALOGUE") {
+          const dialStep = mission.steps[activeStepIndex];
+          return (
+            <div className="flex-1 max-w-2xl mx-auto w-full py-8 flex flex-col gap-6 animate-in fade-in duration-300">
+              <div className="p-8 rounded-3xl border border-white/10 bg-gray-950/60 backdrop-blur-xl relative flex flex-col gap-6">
+                <div className="flex flex-col gap-1 border-b border-white/5 pb-4">
+                  <span className="font-mono text-[9px] text-cyan-400 font-bold tracking-widest uppercase">
+                    Socratic Uplink Established
+                  </span>
+                  <h2 className="font-display font-bold text-xl sm:text-2xl text-white mt-1">
+                    {dialStep.title}
+                  </h2>
                 </div>
 
-                {/* Mass Selector (to trigger misconception demonstrations) */}
-                <div className="flex flex-col gap-2 p-3 rounded-lg bg-black/30 border border-white/5">
-                  <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-wider">Select Cargo Payload Material:</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { mass: 100, label: "📦 Wood Crate (100kg)" },
-                      { mass: 500, label: "⛓️ Heavy Safe (500kg)" },
-                      { mass: 10, label: "🔋 Lithium Cell (10kg)" }
-                    ].map((item) => (
-                      <button
-                        key={item.mass}
-                        type="button"
-                        onClick={() => {
-                          setCargoMass(item.mass);
-                          globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
-                        }}
-                        className={`py-1.5 px-2 rounded text-[10px] text-center font-mono border transition-all cursor-pointer ${
-                          cargoMass === item.mass
-                            ? "bg-cyan-500/10 border-cyan-500 text-cyan-300"
-                            : "bg-white/5 border-transparent text-gray-400 hover:bg-white/10"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-col gap-5">
+                  {dialStep.content.dialogue?.map((seg, i) => (
+                    <div key={i} className="flex gap-4 items-start p-4 rounded-2xl border border-white/5 bg-white/[0.01]">
+                      <div className="w-10 h-10 rounded-xl bg-gray-950 border border-white/10 flex items-center justify-center text-lg shrink-0 shadow-inner">
+                        {seg.avatar === "GALILEO" ? "🔭" : seg.avatar === "CURIE" ? "🧪" : "🏛️"}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-mono text-[9px] text-cyan-400 font-bold">{seg.speaker}</span>
+                        <p className="text-gray-300 font-mono text-xs leading-relaxed">{seg.message}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/35 border border-white/5">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-gray-500 uppercase font-mono">HYPOTHESIS COORDINATE</span>
-                    <span className="text-orange-400 font-mono font-bold text-xs">{predictionFlagX} m</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5 items-end">
-                    <span className="text-[10px] text-gray-500 uppercase font-mono">CALIBRATION VARIABLES</span>
-                    <span className="text-cyan-400 font-mono font-bold text-xs">{angle}° elevation @ {velocity} m/s</span>
-                  </div>
-                </div>
+                <button
+                  onClick={() => nextStep(mission.steps.length)}
+                  className="w-full mt-4 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                >
+                  INITIALIZE PILOT SANDBOX <ChevronRight size={14} />
+                </button>
               </div>
-            )}
+            </div>
+          );
+        }
 
-            {/* --- PHASE 3: REFLECT --- */}
-            {cognitiveLoopState === "REFLECT" && (
-              <div className="flex flex-col gap-3">
-                {/* Find the current active investigation */}
-                {(() => {
-                  const currentInv = investigations[investigations.length - 1];
-                  if (!currentInv) return null;
+        // --- STEP ROUTING: SANDBOX & CHALLENGE COCKPIT VIEW ---
+        const isChallenge = mission.steps[activeStepIndex]?.type === "CHALLENGE_EXPERIMENT";
+        
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch flex-1 min-h-0">
+            
+            {/* Left Control Column (Col 1): PREDICT -> EXPERIMENT -> REFLECT Deck */}
+            <div className="lg:col-span-1 flex flex-col gap-5">
+              
+              {/* IF IN SANDBOX: COGNITIVE LOOP PANEL */}
+              {!isChallenge ? (
+                <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl flex flex-col gap-4">
+                  
+                  {/* COGNITIVE HEADER */}
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
+                      Cognitive Loop State
+                    </span>
+                    <span className={`font-mono text-[8px] font-bold px-2 py-0.5 rounded ${
+                      cognitiveLoopState === "PREDICT" 
+                        ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" 
+                        : cognitiveLoopState === "EXPERIMENT"
+                        ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    }`}>
+                      {cognitiveLoopState}
+                    </span>
+                  </div>
 
-                  const hypothesisFlagX = currentInv.prediction?.flagX || 0;
-                  const actualLandingX = currentInv.experimentResult?.telemetry?.impactX || 0;
-                  const delta = actualLandingX - hypothesisFlagX;
-                  const impactMessage = currentInv.experimentResult?.telemetry?.message || "";
-                  const loopSuccess = currentInv.experimentResult?.isSuccess || false;
-
-                  return (
-                    <>
-                      <div className="p-3.5 rounded-xl border border-emerald-500/10 bg-emerald-500/5 flex flex-col gap-1 text-xs">
-                        <span className="font-bold text-emerald-400">Step 3: Empirical Reflection</span>
-                        <p className="text-gray-400 text-[11px] leading-relaxed">
-                          Compare the physics outcome with your original prediction. Learning is iterative — look at the curve 
-                          and write down your scientific finding to save into your Research Journal.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2.5 text-center bg-black/40 p-3 rounded-xl border border-white/5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-[8px] text-gray-500 uppercase">HYPOTHESIS</span>
-                          <span className="font-mono text-xs text-orange-400 font-bold">{hypothesisFlagX}m</span>
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-[8px] text-gray-500 uppercase">EMPIRICAL RESULT</span>
-                          <span className="font-mono text-xs text-emerald-400 font-bold">{actualLandingX}m</span>
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-[8px] text-gray-500 uppercase">DELTA RANGE</span>
-                          <span className={`font-mono text-xs font-bold ${delta === 0 ? "text-emerald-400" : "text-yellow-500"}`}>
-                            {delta === 0 ? "🎯 PERFECT ALIGNMENT" : `${delta > 0 ? "+" : ""}${delta}m`}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Display the outcome details */}
-                      <p className="text-[11px] font-mono text-gray-300 leading-relaxed bg-white/5 px-3 py-2.5 rounded-lg border border-white/5">
-                        {impactMessage}
+                  {/* COGNITIVE BODY */}
+                  {cognitiveLoopState === "PREDICT" && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      <p className="font-mono text-xs text-gray-300 leading-relaxed border border-dashed border-white/5 p-3 rounded-xl bg-black/20">
+                        {mission.predictionPrompt}
                       </p>
 
-                      {/* Misconception trigger: Heavier objects fall faster */}
-                      {activeMisconceptions.includes("MISCONCEPTION_MASS_DEPENDENT_GRAVITY") && (
-                        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs flex flex-col gap-1.5">
-                          <span className="font-bold flex items-center gap-1.5">
-                            ⚠️ DIVERGENT PREDICTION DETECTED
-                          </span>
-                          <p className="text-[11px] leading-relaxed text-yellow-200/80">
-                            Your hypothesis assumed that mass changes gravity's rate. However, the simulation proved that the Wood 
-                            crate and the Iron Safe land at the exact same spot under Mars gravity.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              triggerMisconceptionDemo(true);
-                              globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
-                            }}
-                            className="self-start mt-1 py-1 px-2.5 rounded bg-yellow-500 text-black text-[10px] font-mono font-bold hover:bg-yellow-400 transition-all active:scale-95 cursor-pointer"
-                          >
-                            🔬 RUN CO-OBSERVATION TEST (SIMULTANEOUS DUAL LAUNCH)
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Demo Mode active feedback */}
-                      {misconceptionDemoMode && (
-                        <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-200 text-xs">
-                          <span className="font-bold flex items-center gap-1.5">🔄 CO-OBSERVATION ACTIVE</span>
-                          <p className="text-[11px] leading-relaxed mt-1 text-cyan-200/80">
-                            A comparative test has overlayed both physical pathways on the canvas stage. Notice that they trace 
-                            the exact same curve, independent of mass!
-                          </p>
-                        </div>
-                      )}
-
                       <div className="flex flex-col gap-2">
-                        <label className="font-mono text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Select or Type Reflection Log:</label>
-                        <div className="flex flex-col gap-1.5">
-                          {[
-                            "We found out that gravity exerts equal acceleration regardless of the cargo's mass.",
-                            "The low gravity of Mars means we need less angle to clear the Tharsis basalt peak.",
-                            "Splitting the vectors proved that horizontal speed stays perfectly constant during flight."
-                          ].map((refPrompt, index) => (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => {
-                                setReflectionText(refPrompt);
-                                globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+                        {mission.predictionPresets.map((preset) => (
+                          <label
+                            key={preset.id}
+                            className={`flex items-start gap-2.5 p-3 rounded-xl border font-mono text-[11px] leading-snug cursor-pointer transition-all ${
+                              selectedPresetId === preset.id
+                                ? "bg-cyan-950/20 border-cyan-500/30 text-white"
+                                : "bg-white/[0.01] border-white/5 text-gray-400 hover:bg-white/[0.03] hover:text-gray-200"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="prediction_preset"
+                              value={preset.id}
+                              checked={selectedPresetId === preset.id}
+                              onChange={() => {
+                                setSelectedPresetId(preset.id);
+                                if (preset.isMisconception && preset.misconceptionId) {
+                                  addMisconception(preset.misconceptionId);
+                                } else {
+                                  // remove active misconceptions if correct
+                                  mission.predictionPresets.forEach(p => {
+                                    if (p.misconceptionId) removeMisconception(p.misconceptionId);
+                                  });
+                                }
                               }}
-                              className={`p-2 rounded-lg border text-[10px] text-left transition-all cursor-pointer ${
-                                reflectionText === refPrompt
-                                  ? "bg-emerald-500/10 border-emerald-500 text-emerald-200"
-                                  : "bg-white/5 border-transparent text-gray-400 hover:bg-white/10"
-                              }`}
-                            >
-                              📝 {refPrompt}
-                            </button>
-                          ))}
-                        </div>
+                              className="mt-0.5 accent-cyan-400"
+                            />
+                            <span>{preset.label}</span>
+                          </label>
+                        ))}
+                      </div>
 
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-mono text-[9px] text-gray-500 font-bold uppercase">Qualitative Rationale:</span>
                         <textarea
-                          rows={2}
-                          value={reflectionText}
-                          onChange={(e) => setReflectionText(e.target.value)}
-                          placeholder="What did this experiment teach you? Summarize what you observed..."
-                          className="mt-1.5 w-full px-3 py-2 text-xs text-white bg-black/40 border border-white/10 rounded-lg focus:outline-none focus:border-emerald-500/40"
+                          rows={3}
+                          className="w-full bg-white/5 border border-white/5 focus:border-cyan-500/20 rounded-xl p-2.5 text-xs text-white placeholder-gray-600 font-mono focus:outline-none focus:ring-0 resize-none"
+                          placeholder="State your physical reasoning..."
+                          value={rationaleText}
+                          onChange={(e) => setRationaleText(e.target.value)}
                         />
                       </div>
 
                       <button
-                        type="button"
+                        onClick={() => {
+                          if (!selectedPresetId) return;
+                          commitPrediction(0, 0, rationaleText);
+                          globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+                        }}
+                        disabled={!selectedPresetId}
+                        className={`w-full py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
+                          selectedPresetId
+                            ? "bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_15px_rgba(34,211,238,0.3)] cursor-pointer"
+                            : "bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed"
+                        }`}
+                      >
+                        COMMIT COGNITIVE PREDICTION (+100 XP)
+                      </button>
+                    </div>
+                  )}
+
+                  {cognitiveLoopState === "EXPERIMENT" && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      <div className="p-3.5 rounded-xl border border-dashed border-emerald-500/20 bg-emerald-950/10 font-mono text-[10px] text-emerald-400 leading-normal">
+                        <strong>PREDICTION RECORDED.</strong> Calibrate system sliders in the main cockpit, run simulation, and log at least 1 outcome to unlock reflection.
+                      </div>
+
+                      {/* Run trial button */}
+                      <button
+                        onClick={runSimulation}
+                        disabled={simProgress >= 0}
+                        className="w-full py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] disabled:opacity-45"
+                      >
+                        <RefreshCw size={13} className={simProgress >= 0 ? "animate-spin" : ""} />
+                        {simProgress >= 0 ? "SIMULATION RUNNING..." : "RUN EXPERIMENT"}
+                      </button>
+
+                      {launches.length > 0 && (
+                        <div className="flex flex-col gap-2 mt-2">
+                          <span className="font-mono text-[9px] text-gray-500 font-bold uppercase">Empirical Data Captured:</span>
+                          <button
+                            onClick={() => {
+                              useEngineStore.getState().setCognitiveLoopState("REFLECT");
+                              globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+                            }}
+                            className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-xl font-mono text-[11px] font-bold"
+                          >
+                            PROCEED TO SYSTEM REFLECTION ➔
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {cognitiveLoopState === "REFLECT" && (
+                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
+                      {isDualMassActive ? (
+                        <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-950/15 flex flex-col gap-2 font-mono text-xs text-amber-200">
+                          <span className="text-[9px] font-bold uppercase text-amber-400 tracking-wider flex items-center gap-1">
+                            <span>💡</span> GALILEO'S PARADOX UNCOVERED
+                          </span>
+                          <p className="leading-relaxed text-[11px] text-gray-300">
+                            You observed the <strong className="text-white">10kg Wood Crate</strong> and <strong className="text-white">500kg Iron Safe</strong> glide side-by-side in perfect lockstep, landing together at the exact same moment!
+                          </p>
+                          <p className="text-[10px] text-amber-300/80 leading-normal border-t border-white/5 pt-2 mt-1">
+                            Why does the 500kg safe, which is pulled down by 50 times more gravitational force, not outrun the 10kg crate? How does inertia play a role? State your findings below:
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="font-mono text-xs text-cyan-300 leading-relaxed bg-cyan-950/20 border border-cyan-500/10 p-3 rounded-xl">
+                          Analyze your telemetry logs. Explain what you discovered regarding this relationship:
+                        </p>
+                      )}
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-mono text-[9px] text-gray-500 font-bold uppercase">Your Reflection response:</span>
+                        <textarea
+                          rows={3}
+                          className="w-full bg-white/5 border border-white/5 focus:border-cyan-500/20 rounded-xl p-2.5 text-xs text-white placeholder-gray-600 font-mono focus:outline-none focus:ring-0 resize-none"
+                          placeholder={isDualMassActive ? "E.g., Force increases with mass, but acceleration is Force/Mass..." : "Synthesize your scientific explanation..."}
+                          value={reflectionText}
+                          onChange={(e) => setReflectionText(e.target.value)}
+                        />
+                      </div>
+
+                      <button
                         onClick={() => {
                           if (!reflectionText.trim()) return;
-                          submitReflection(reflectionText, reflectionText);
-                          setReflectionText("");
-                          setRationaleText("");
-                          setSelectedPresetRationale("");
-                          setPredictionFlagX(null);
-                          // Stop demo mode if running
-                          triggerMisconceptionDemo(false);
+                          submitReflection("", reflectionText);
                           
-                          // Award XP and complete mission if success was met
-                          if (loopSuccess) {
-                            awardXP(100); // 100 extra cognitive XP!
-                            completeMission(activeMissionId);
-                          }
+                          // Formulate and log in notebook
+                          useEngineStore.getState().addNotebookEntry(
+                            `${mission.subject}: ${mission.title}`,
+                            reflectionText,
+                            mission.subject
+                          );
+
+                          // Unlock Discoveries
+                          mission.scientificDiscoveries.forEach((d) => {
+                            useEngineStore.getState().unlockDiscovery(d.id);
+                          });
+
+                          // Award and Proceed!
+                          awardXP(200);
                           globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "SUCCESS" } });
+                          
+                          // Advance to Socratic formalization step!
+                          nextStep(mission.steps.length);
                         }}
                         disabled={!reflectionText.trim()}
                         className={`w-full py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
@@ -823,108 +1114,332 @@ export default function MissionActiveView() {
                             : "bg-white/5 text-gray-600 border border-white/5 cursor-not-allowed"
                         }`}
                       >
-                        💾 COMMIT SCIENTIFIC FINDING & RELOAD AMMUNITION (+100 XP)
+                        COMMIT FORMAL FINDING (+200 XP)
                       </button>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        </div>
+                    </div>
+                  )}
 
-        {/* Right Side (Col 4): Socratic AI Mentor Station */}
-        <div className="lg:col-span-1 flex flex-col h-[480px] lg:h-auto rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl overflow-hidden shadow-lg">
-          {/* AI Station Header with dropdown switcher */}
-          <div className="p-4 border-b border-white/10 bg-gray-950 flex flex-col gap-2">
-            <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
-              SOCRATIC AI COMPANION
-            </span>
+                </div>
+              ) : (
+                /* IF IN CHALLENGE STEP */
+                <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl flex flex-col gap-4">
+                  <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                    <Award size={14} className="text-orange-400" />
+                    <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
+                      Active Challenge Target
+                    </span>
+                  </div>
 
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedMentor}
-                onChange={(e) => handleMentorChange(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-500/30 cursor-pointer w-full"
-              >
-                <option value="GALILEO">Galileo Galilei (🔭)</option>
-                <option value="NEWTON">Sir Isaac Newton (🍎)</option>
-                <option value="FEYNMAN">Dr. Richard Feynman (🥁)</option>
-              </select>
-            </div>
-          </div>
+                  <p className="font-mono text-xs text-gray-300 leading-relaxed border border-dashed border-orange-500/20 p-3 rounded-xl bg-orange-950/10">
+                    {mission.steps[3]?.content.challengeQuestion?.questionText}
+                  </p>
 
-          {/* Interactive Chat bubble screen area */}
-          <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 min-h-0">
-            {chatLog.map((chat, idx) => (
-              <div
-                key={idx}
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs flex flex-col gap-1 ${
-                  chat.sender === "USER"
-                    ? "self-end bg-cyan-600/20 text-cyan-100 rounded-br-none border border-cyan-500/10"
-                    : "self-start bg-white/5 text-gray-200 rounded-bl-none border border-white/5"
-                }`}
-              >
-                {/* Avatar tag */}
-                <span className="font-mono text-[8px] text-gray-400 font-bold tracking-wider">
-                  {chat.sender === "USER" ? "Astronaut Cadet" : mentorsInfo[selectedMentor]?.name}
+                  <div className="flex flex-col gap-3 mt-1 font-mono text-[10px] text-gray-400">
+                    <span className="text-white font-bold uppercase text-[9px]">TARGET CRITERIA:</span>
+                    <div className="flex items-center gap-1.5 bg-black/40 p-2 rounded border border-white/5">
+                      <span className="text-cyan-400">⚡</span>
+                      <span>Target Value Range: <strong className="text-white">{mission.experimentFlow.targets.min} - {mission.experimentFlow.targets.max} {mission.experimentFlow.targets.unit}</strong></span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={runSimulation}
+                    disabled={simProgress >= 0}
+                    className="w-full mt-2 py-3 rounded-2xl bg-orange-500 hover:bg-orange-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(249,115,22,0.2)] disabled:opacity-45"
+                  >
+                    <Play size={13} fill="currentColor" className={simProgress >= 0 ? "animate-pulse" : ""} />
+                    {simProgress >= 0 ? "SIMULATION ACTIVE..." : "LAUNCH DEPLOYMENT"}
+                  </button>
+                </div>
+              )}
+
+              {/* TELEMETRY OBSERVATIONS LEDGER */}
+              <div className="p-5 rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl flex flex-col gap-3">
+                <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest border-b border-white/5 pb-2 flex justify-between items-center">
+                  <span>Historical Telemetry Log</span>
+                  <span className="text-[8px] text-gray-500 font-normal">Empirical Records</span>
                 </span>
-                <p className="leading-relaxed whitespace-pre-wrap">{chat.text}</p>
+
+                {launches.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-[10px] font-mono text-gray-500 italic text-center py-6 border border-dashed border-white/5 rounded-xl bg-black/25">
+                    No telemetry entries recorded yet. Run simulations to log variables.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-[140px] overflow-y-auto pr-1">
+                    <table className="w-full font-mono text-[9px] text-left">
+                      <thead>
+                        <tr className="text-gray-500 border-b border-white/5 pb-1">
+                          <th className="font-normal py-1">TRIAL</th>
+                          <th className="font-normal py-1">CALIBRATIONS</th>
+                          <th className="font-normal py-1">OUTCOME</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {launches.map((l) => (
+                          <tr key={l.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <td className="py-1 text-gray-400">#0{l.id}</td>
+                            <td className="py-1 text-cyan-400 text-[8px] font-medium leading-tight">
+                              {Object.entries(l.params).map(([k, v]) => `${k}:${v}`).join(", ")}
+                            </td>
+                            <td className={`py-1 font-bold ${
+                              l.status === "SECURED" || l.status === "BALANCED" || l.status === "OUTRAGED" || l.status === "TRAGIC"
+                                ? "text-emerald-400" 
+                                : l.status === "CRASHED"
+                                ? "text-red-400"
+                                : "text-orange-500"
+                            }`}>
+                              {l.outcomeLabel}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            ))}
 
-            {isAiThinking && (
-              <div className="self-start max-w-[85%] rounded-2xl rounded-bl-none px-4 py-2.5 text-xs bg-white/5 border border-white/5 text-gray-500 font-mono animate-pulse">
-                Uplinking telemetry to master mind...
-              </div>
-            )}
-
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* SOCRATIC PRESETS DECK */}
-          <div className="px-3 py-2 border-t border-white/10 bg-gray-950/60 flex flex-col gap-1.5">
-            <span className="font-mono text-[8px] text-cyan-400 font-bold uppercase tracking-wider">GUIDED INQUIRIES:</span>
-            <div className="flex flex-col gap-1">
-              {[
-                { label: "🔭 Ask Galileo about vector deconstruction", text: "How does splitting the trajectory into constant horizontal velocity and accelerated vertical fall help me clear Tharsis Peak?" },
-                { label: "🍎 Ask Newton about Mars gravity ratio", text: "Since gravity on Mars is 3.72 m/s², how does this lower gravitational pull alter our projectile apex compared to Earth's 9.8 m/s²?" },
-                { label: "🥁 Ask Feynman to visualize the apex speed", text: "At the exact peak of flight (the apex), is the horizontal speed zero? Help me visualize the speed vectors at the top." }
-              ].map((p, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handlePresetClick(p.text)}
-                  disabled={isAiThinking}
-                  className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
-                >
-                  {p.label}
-                </button>
-              ))}
             </div>
+
+            {/* Center Canvas Stage (Col 2 & 3): Displays Interactive Physics Sandbox & Replays */}
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              
+              {/* Dynamic Simulated Interactive Window Container */}
+              <div className="relative w-full aspect-video rounded-3xl border border-white/10 bg-gray-950 overflow-hidden shadow-2xl flex flex-col">
+                
+                {/* Header indicators */}
+                <div className="p-3 border-b border-white/5 bg-gray-950/80 flex items-center justify-between font-mono text-[9px] text-gray-400 z-10">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    <span>COCKPIT RESOLVED: {mission.world.environmentName}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span>ATMOSPHERE: {mission.world.visualAtmosphere}</span>
+                  </div>
+                </div>
+
+                {/* HTML5 Canvas Element */}
+                <canvas
+                  ref={canvasRef}
+                  width={520}
+                  height={280}
+                  className="flex-1 w-full bg-gray-950 relative cursor-crosshair"
+                />
+
+                {/* Vector Slider Controls Panel */}
+                <div className="p-4 border-t border-white/10 bg-gray-950/80 backdrop-blur-md flex flex-col gap-3 z-10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {mission.experimentFlow.parameters.map((p) => (
+                      <div key={p.name} className="flex flex-col gap-1.5">
+                        <div className="flex justify-between font-mono text-[10px]">
+                          <span className="text-gray-400">{p.label} ({p.symbol}):</span>
+                          <span className="text-cyan-400 font-bold">{simParameters[p.name] || p.defaultValue} {p.unit}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={p.min}
+                          max={p.max}
+                          step={p.step}
+                          value={simParameters[p.name] || p.defaultValue}
+                          disabled={!isChallenge && cognitiveLoopState !== "EXPERIMENT"}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setSimParameters((prev) => ({ ...prev, [p.name]: val }));
+                          }}
+                          className="accent-cyan-400 h-1 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* DYNAMIC FORMULA STAT STATION */}
+              <div className="p-4 rounded-2xl border border-white/5 bg-gray-950/30 font-mono text-xs flex flex-col gap-2 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-500 via-cyan-500 to-purple-500" />
+                <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest">Scientific Insight Formula Relationship</span>
+                <div className="p-3 rounded bg-black/60 border border-white/5 text-center text-cyan-300 font-mono text-xs sm:text-sm shadow-inner">
+                  {mission.coreScientificConcept.equationLatex || "y = f(x)"}
+                </div>
+                <p className="text-[10px] text-gray-500 leading-normal">
+                  {mission.coreScientificConcept.description}
+                </p>
+              </div>
+
+            </div>
+
+            {/* Right Side (Col 4): Socratic AI Mentor Station */}
+            <div className="lg:col-span-1 flex flex-col h-[480px] lg:h-auto rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl overflow-hidden shadow-lg">
+              
+              {/* AI Station Header with dropdown switcher */}
+              <div className="p-4 border-b border-white/10 bg-gray-950 flex flex-col gap-2">
+                <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
+                  SOCRATIC AI COMPANION
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedMentor}
+                    onChange={(e) => handleMentorChange(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-500/30 cursor-pointer w-full"
+                  >
+                    {mission.socraticMentorDialogue.map((m) => (
+                      <option key={m.avatar} value={m.avatar}>
+                        {m.character} ({mentorsInfo[m.avatar]?.emoji || "🎓"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Interactive Chat bubble screen area */}
+              <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 min-h-0">
+                {chatLog.map((chat, idx) => (
+                  <div
+                    key={idx}
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs flex flex-col gap-1 ${
+                      chat.sender === "USER"
+                        ? "self-end bg-cyan-600/20 text-cyan-100 rounded-br-none border border-cyan-500/10"
+                        : "self-start bg-white/5 text-gray-200 rounded-bl-none border border-white/5"
+                    }`}
+                  >
+                    <span className="font-mono text-[8px] text-gray-400 font-bold tracking-wider">
+                      {chat.sender === "USER" ? "Astronaut Cadet" : mentorsInfo[selectedMentor]?.name}
+                    </span>
+                    <p className="leading-relaxed whitespace-pre-wrap">{chat.text}</p>
+                  </div>
+                ))}
+
+                {isAiThinking && (
+                  <div className="self-start max-w-[85%] rounded-2xl rounded-bl-none px-4 py-2.5 text-xs bg-white/5 border border-white/5 text-gray-500 font-mono animate-pulse">
+                    Uplinking telemetry to Socratic guide...
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* SOCRATIC PRESETS DECK */}
+              <div className="px-3 py-2 border-t border-white/10 bg-gray-950/60 flex flex-col gap-1.5">
+                <span className="font-mono text-[8px] text-cyan-400 font-bold uppercase tracking-wider">GUIDED INQUIRIES:</span>
+                <div className="flex flex-col gap-1">
+                  {mission.subject === "Physics" && [
+                    { label: "🔭 Ask Galileo about vector deconstruction", text: "How does splitting the trajectory into constant horizontal velocity and accelerated vertical fall help me clear Tharsis Peak?" },
+                    { label: "🍎 Ask Newton about Mars gravity ratio", text: "Since gravity on Mars is 3.72 m/s², how does this lower gravitational pull alter our projectile apex compared to Earth's 9.8 m/s²?" },
+                    { label: "🥁 Ask Feynman to visualize the apex speed", text: "At the exact peak of flight (the apex), is the horizontal speed zero? Help me visualize the speed vectors at the top." }
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handlePresetClick(p.text)}
+                      disabled={isAiThinking}
+                      className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  {mission.subject === "Chemistry" && [
+                    { label: "🧪 Ask Curie about equivalence points", text: "Why does the pH jump so rapidly around the equivalence point?" },
+                    { label: "🧪 Ask Curie about buffer behaviors", text: "What defines a weak acid vs a strong acid titration curve?" }
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handlePresetClick(p.text)}
+                      disabled={isAiThinking}
+                      className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  {mission.subject !== "Physics" && mission.subject !== "Chemistry" && [
+                    { label: "🏛️ Ask Hypatia about system dynamics", text: "How can minor feedback loops in high pressure systems create non-linear collapse thresholds?" },
+                    { label: "🏛️ Ask Hypatia about balancing parameters", text: "Can you provide a conceptual Socratic hint regarding the variables of this conflict?" }
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handlePresetClick(p.text)}
+                      disabled={isAiThinking}
+                      className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chat input form */}
+              <form onSubmit={handleAskMentor} className="p-3 border-t border-white/10 bg-gray-950 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  className="flex-1 bg-white/5 border border-white/5 hover:border-white/15 focus:border-cyan-500/25 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-0 transition-colors"
+                  placeholder={`Ask ${mentorsInfo[selectedMentor]?.name}...`}
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  disabled={!aiInput.trim() || isAiThinking}
+                  className="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Send size={14} />
+                </button>
+              </form>
+            </div>
+
           </div>
+        );
+      })()}
 
-          {/* Chat input form */}
-          <form onSubmit={handleAskMentor} className="p-3 border-t border-white/10 bg-gray-950 flex items-center gap-1.5">
-            <input
-              type="text"
-              className="flex-1 bg-white/5 border border-white/5 hover:border-white/15 focus:border-cyan-500/25 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-0 transition-colors"
-              placeholder={`Ask ${mentorsInfo[selectedMentor]?.name}...`}
-              value={aiInput}
-              onChange={(e) => setAiInput(e.target.value)}
-            />
+      {/* --- STEP ROUTING: DEBRIEF (CONGRATULATIONS & REWARD PACK) --- */}
+      {mission.steps[activeStepIndex]?.type === "DEBRIEF" && (
+        <div className="flex-1 max-w-2xl mx-auto w-full py-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="p-8 rounded-3xl border border-white/10 bg-gray-950/70 backdrop-blur-xl relative flex flex-col gap-6 text-center items-center">
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 animate-pulse" />
+
+            <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(34,211,238,0.25)]">
+              🎖️
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
+                MISSION DEBRIEF SECURED
+              </span>
+              <h2 className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight leading-tight">
+                {mission.steps[activeStepIndex].title}
+              </h2>
+            </div>
+
+            <div className="prose prose-invert max-w-none text-gray-300 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap border-y border-white/5 py-4">
+              {mission.steps[activeStepIndex].content.narrative}
+            </div>
+
+            {/* Rewards Card */}
+            <div className="p-5 rounded-2xl border border-white/5 bg-black/40 font-mono text-xs text-gray-400 flex flex-col gap-2 w-full max-w-md">
+              <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
+                <span>STABILITY RECOVERED:</span>
+                <span className="text-emerald-400 font-bold">100% IN COMPLIANCE</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>DURABLE INTEL RECOVERED:</span>
+                <span className="text-cyan-400 font-bold">+{mission.rewards.xp} XP</span>
+              </div>
+            </div>
+
             <button
-              type="submit"
-              disabled={!aiInput.trim() || isAiThinking}
-              className="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => {
+                setView("constellation");
+                globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "SUCCESS" } });
+              }}
+              className="w-full mt-2 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
             >
-              <Send size={14} />
+              CONCLUDE DEPLOYMENT & ALIGN NEXT TARGETS
             </button>
-          </form>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* APOLLO 13 / NASA COCKPIT DEBRIEF MODAL INTERFACE */}
+      {/* --- PREVIEW OUT-OF-BOUNDS CALIBRATION OVERLAY DIALOG --- */}
       {debriefState.show && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-gray-950 p-6 flex flex-col gap-5 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -943,9 +1458,9 @@ export default function MissionActiveView() {
               </div>
 
               <div className="flex flex-col">
-                <span className="font-mono text-[9px] text-gray-500 uppercase tracking-widest">Orbital Evaluation</span>
+                <span className="font-mono text-[9px] text-gray-500 uppercase tracking-widest">Active Evaluation</span>
                 <h3 className="font-display font-bold text-lg text-white">
-                  {debriefState.success ? "Mission Operations: Successful" : "Mission Operations: Aborted"}
+                  {debriefState.success ? "Evaluation Result: Successful" : "Evaluation Result: Aborted"}
                 </h3>
               </div>
             </div>
@@ -957,19 +1472,17 @@ export default function MissionActiveView() {
             {/* Readout Telemetry Table */}
             <div className="p-4 rounded-xl border border-white/5 bg-gray-950/80 font-mono text-xs text-gray-400 flex flex-col gap-2">
               <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span>IMPACT COORDINATE:</span>
-                <span className="text-white font-bold">{debriefState.impactX} meters</span>
+                <span>OUTCOME VARIABLE VALUE:</span>
+                <span className="text-white font-bold">{debriefState.outcomeValue} ({debriefState.outcomeLabel})</span>
               </div>
               <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span>TARGET COMPLIANCE:</span>
-                <span className={debriefState.success ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-                  {debriefState.success ? "100% IN RANGE" : "OUT OF BOUNDS"}
-                </span>
+                <span>TARGET SPECIFICATION:</span>
+                <span className="text-white font-bold">{mission.experimentFlow.targets.min} - {mission.experimentFlow.targets.max} {mission.experimentFlow.targets.unit}</span>
               </div>
               <div className="flex justify-between">
-                <span>RECOVERABLE DATA XP:</span>
+                <span>DURABLE INTEL XP RECOVERED:</span>
                 <span className="text-cyan-400 font-bold">
-                  {debriefState.success ? "+50 INTEL XP" : "0 XP (RETRY ALLOCATED)"}
+                  {debriefState.success ? `+${mission.rewards.xp} XP` : "0 XP (RETRY ALLOCATED)"}
                 </span>
               </div>
             </div>
@@ -982,18 +1495,17 @@ export default function MissionActiveView() {
                   </div>
                   <div className="flex flex-col">
                     <span className="font-mono text-[8px] text-cyan-400 font-bold uppercase tracking-wider">Badge Unlocked</span>
-                    <span className="font-display font-bold text-[11px] text-white">Tharsis Trajectory Courier (Class XI Module 1)</span>
+                    <span className="font-display font-bold text-[11px] text-white">
+                      {mission.successConditions.badgeUnlocked?.name || "Topic Master"}
+                    </span>
                   </div>
                 </div>
 
                 <div className="border-t border-cyan-500/10 pt-2 flex flex-col gap-1.5">
-                  <span className="font-mono text-[8px] text-gray-400 font-bold">REVEALED PATH RELATIONSHIP (PARABOLA):</span>
+                  <span className="font-mono text-[8px] text-gray-400 font-bold">REVEALED CONCEPT EQUATION:</span>
                   <div className="py-2.5 rounded bg-black/60 border border-cyan-500/10 text-center text-cyan-300 font-mono text-[11px] shadow-inner select-text">
-                    y = x·tan(θ) - [g·x² / (2·v₀²·cos²(θ))]
+                    {mission.coreScientificConcept.equationLatex || "E = mc²"}
                   </div>
-                  <p className="font-mono text-[9px] text-gray-400 leading-relaxed">
-                    By isolating vertical fall from horizontal momentum, the curve resolves as a perfect conic section. You have successfully derived projectile physics empirically!
-                  </p>
                 </div>
               </div>
             )}
@@ -1014,7 +1526,6 @@ export default function MissionActiveView() {
               <button
                 onClick={() => {
                   handleDismissDebrief();
-                  setView("mission-details");
                   globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
                 }}
                 className={`flex-1 py-3 rounded-2xl font-mono text-xs font-bold text-black transition-all cursor-pointer ${
@@ -1029,6 +1540,7 @@ export default function MissionActiveView() {
           </div>
         </div>
       )}
+
     </main>
   );
 }
