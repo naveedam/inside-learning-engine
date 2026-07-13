@@ -158,20 +158,20 @@ export default function ConstellationMap() {
             >
               <div className="relative group">
                 {/* Outer halo circular ring pulse */}
-                <span className={`absolute -inset-4 rounded-full border border-white/5 animate-ping opacity-30`} />
+                <span className={`absolute -inset-4 rounded-full border border-white/5 animate-ping opacity-30 pointer-events-none`} />
                 <span className={`absolute -inset-8 rounded-full border border-white/5 animate-pulse-slow pointer-events-none`} />
 
                 {/* The Interactive Core Star Node */}
                 <button
                   onClick={() => selectChapter(chapter.id)}
-                  className={`w-12 h-12 rounded-full border-2 bg-gray-950 flex items-center justify-center cursor-pointer group-hover:scale-110 active:scale-95 transition-all duration-300 ${colors.border}`}
+                  className={`w-12 h-12 rounded-full border-2 bg-gray-950 flex items-center justify-center cursor-pointer group-hover:scale-110 active:scale-95 relative z-10 transition-all duration-300 ${colors.border}`}
                   title={`Align sensors to ${chapter.title}`}
                 >
                   <IconComponent size={20} className="group-hover:rotate-12 transition-transform duration-300" />
                 </button>
 
                 {/* Star node absolute hovering coordinates box */}
-                <div className="absolute top-14 left-1/2 -translate-x-1/2 w-48 sm:w-64 p-4 rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-md opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none sm:pointer-events-auto z-30 shadow-2xl">
+                <div className="absolute top-14 left-1/2 -translate-x-1/2 w-48 sm:w-64 p-4 rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-md opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto z-30 shadow-2xl">
                   <div className="flex flex-col gap-1">
                     <span className={`font-mono text-[8px] font-bold uppercase tracking-wider ${colors.text}`}>
                       {chapter.packSubject} • {chapter.packGrade}
