@@ -33,6 +33,7 @@ export default function ProjectileSim({
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const dragRef = useRef(false);
+  const dragFlagRef = useRef(false);
 
   const getLauncherPivot = (width: number, height: number) => {
     const scaleX = (m: number) => (m / 900) * (width - 100) + 50;
@@ -48,6 +49,13 @@ export default function ProjectileSim({
     const scaleYFactor = canvas.height / rect.height;
     const mouseX = (e.clientX - rect.left) * scaleXFactor;
     const mouseY = (e.clientY - rect.top) * scaleYFactor;
+
+    if (dragFlagRef.current) {
+      const physicsX = Math.round(((mouseX - 50) / (canvas.width - 100)) * 900);
+      const clampedX = Math.max(50, Math.min(850, physicsX));
+      setPredictionFlagX(clampedX);
+      return;
+    }
 
     const pivot = getLauncherPivot(canvas.width, canvas.height);
     const angleRad = (angle * Math.PI) / 180;
@@ -91,6 +99,18 @@ export default function ProjectileSim({
     const mouseX = (e.clientX - rect.left) * scaleXFactor;
     const mouseY = (e.clientY - rect.top) * scaleYFactor;
 
+    // --- Flag drag check ---
+    if (cognitiveLoopState === "PREDICT" && predictionFlagX !== null) {
+      const flagXScaled = ((predictionFlagX / 900) * (canvas.width - 100)) + 50;
+      const flagYScaled = canvas.height - 60;
+      const dx = mouseX - flagXScaled;
+      if (Math.abs(dx) < 22 && mouseY > flagYScaled - 35 && mouseY < flagYScaled + 10) {
+        dragFlagRef.current = true;
+        globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+        return;
+      }
+    }
+
     // --- Ground/Terrain click prediction setting ---
     if (cognitiveLoopState === "PREDICT" && mouseY > canvas.height - 75) {
       const physicsX = Math.round(((mouseX - 50) / (canvas.width - 100)) * 900);
@@ -122,6 +142,9 @@ export default function ProjectileSim({
       dragRef.current = false;
       setIsDragging(false);
     }
+    if (dragFlagRef.current) {
+      dragFlagRef.current = false;
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
@@ -134,6 +157,13 @@ export default function ProjectileSim({
     const scaleYFactor = canvas.height / rect.height;
     const mouseX = (touch.clientX - rect.left) * scaleXFactor;
     const mouseY = (touch.clientY - rect.top) * scaleYFactor;
+
+    if (dragFlagRef.current) {
+      const physicsX = Math.round(((mouseX - 50) / (canvas.width - 100)) * 900);
+      const clampedX = Math.max(50, Math.min(850, physicsX));
+      setPredictionFlagX(clampedX);
+      return;
+    }
 
     const pivot = getLauncherPivot(canvas.width, canvas.height);
 
@@ -165,6 +195,18 @@ export default function ProjectileSim({
     const scaleYFactor = canvas.height / rect.height;
     const mouseX = (touch.clientX - rect.left) * scaleXFactor;
     const mouseY = (touch.clientY - rect.top) * scaleYFactor;
+
+    // --- Flag drag check ---
+    if (cognitiveLoopState === "PREDICT" && predictionFlagX !== null) {
+      const flagXScaled = ((predictionFlagX / 900) * (canvas.width - 100)) + 50;
+      const flagYScaled = canvas.height - 60;
+      const dx = mouseX - flagXScaled;
+      if (Math.abs(dx) < 35 && mouseY > flagYScaled - 45 && mouseY < flagYScaled + 15) {
+        dragFlagRef.current = true;
+        globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+        return;
+      }
+    }
 
     const pivot = getLauncherPivot(canvas.width, canvas.height);
     const angleRad = (angle * Math.PI) / 180;
@@ -204,8 +246,32 @@ export default function ProjectileSim({
     cognitiveLoopState,
     predictionFlagX,
     setPredictionFlagX,
-    misconceptionDemoMode
+    misconceptionDemoMode,
+    activeMisconceptions
   } = useEngineStore();
+
+  const isDualMassActive = activeMisconceptions?.includes("MISCONCEPTION_MASS_DEPENDENT_GRAVITY") || 
+                           misconceptionDemoMode;
+
+  // Starfield for deep space world building
+  const starsRef = useRef<{ x: number; y: number; size: number; baseAlpha: number; offset: number }[]>([]);
+  // Camera shake effects
+  const shakeTimeRef = useRef(0);
+  const shakeIntensityRef = useRef(0);
+
+  useEffect(() => {
+    const list = [];
+    for (let i = 0; i < 40; i++) {
+      list.push({
+        x: Math.random() * 800,
+        y: Math.random() * 140, // upper sky area
+        size: Math.random() * 1.5 + 0.5,
+        baseAlpha: Math.random() * 0.5 + 0.3,
+        offset: Math.random() * Math.PI * 2
+      });
+    }
+    starsRef.current = list;
+  }, []);
 
   // Internal physical state refs to bypass React re-renders during high-frequency math loop ticks
   const stateRef = useRef({
@@ -308,6 +374,8 @@ export default function ProjectileSim({
         if (state.y < mountainHeightAtX && Math.abs(state.x - ridgeX) < ridgeWidth) {
           state.hasCrashed = true;
           setPlaying("PAUSED");
+          shakeTimeRef.current = 25;
+          shakeIntensityRef.current = 6;
           globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "FAILURE" } });
           if (onChallengeComplete) {
             onChallengeComplete(false, state.x);
@@ -319,6 +387,8 @@ export default function ProjectileSim({
           state.y = 0;
           state.hasLanded = true;
           setPlaying("PAUSED");
+          shakeTimeRef.current = 20;
+          shakeIntensityRef.current = 4;
 
           const isSuccess = state.x >= targetRange.min && state.x <= targetRange.max;
           if (isSuccess) {
@@ -425,6 +495,7 @@ export default function ProjectileSim({
   const sparks = useRef<{ x: number; y: number; vx: number; vy: number; size: number; color: string; alpha: number; decay: number }[]>([]);
   const muzzleFlash = useRef<number>(0);
   const radarSweepX = useRef<number>(0);
+  const recoilShiftRef = useRef<number>(0);
 
   // Initialize wind lines once on mount
   useEffect(() => {
@@ -468,6 +539,9 @@ export default function ProjectileSim({
   useEffect(() => {
     if (isPlaying === "PLAYING" && currentFrameIndex === 0) {
       muzzleFlash.current = 1.0;
+      shakeTimeRef.current = 15;
+      shakeIntensityRef.current = 4;
+      recoilShiftRef.current = 18;
     }
   }, [isPlaying, currentFrameIndex]);
 
@@ -488,6 +562,22 @@ export default function ProjectileSim({
       const scaleX = (m: number) => (m / 900) * (width - 100) + 50;
       const scaleY = (m: number) => height - 60 - (m / 300) * (height - 100);
 
+      // Recoil shift decay
+      if (recoilShiftRef.current > 0.05) {
+        recoilShiftRef.current *= 0.88;
+      } else {
+        recoilShiftRef.current = 0;
+      }
+
+      // Camera-shake frame translation
+      ctx.save(); 
+      if (shakeTimeRef.current > 0) {
+        shakeTimeRef.current--;
+        const dx = (Math.random() - 0.5) * shakeIntensityRef.current;
+        const dy = (Math.random() - 0.5) * shakeIntensityRef.current;
+        ctx.translate(dx, dy);
+      }
+
       // --- 1. RUST MARS SKY GRADIENT ---
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
       skyGrad.addColorStop(0, "#0c050a"); // Space edge
@@ -496,6 +586,30 @@ export default function ProjectileSim({
       skyGrad.addColorStop(1, "#1c0907"); // Ground level
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
+
+      // --- Twinkling Martian Stars (Thin atmospheric edge) ---
+      ctx.save();
+      starsRef.current.forEach(star => {
+        const alpha = star.baseAlpha * (0.3 + 0.7 * Math.sin(performance.now() / 250 + star.offset));
+        ctx.fillStyle = `rgba(244, 219, 214, ${alpha})`; // faint warm twinkling stars
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+      });
+      ctx.restore();
+
+      // --- Distant Parallax Volcanoes (Olympus Mons and Tharsis Horizon) ---
+      ctx.save();
+      ctx.fillStyle = "rgba(41, 14, 11, 0.4)";
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      ctx.lineTo(0, height - 70);
+      ctx.quadraticCurveTo(width * 0.15, height - 105, width * 0.3, height - 75);
+      ctx.quadraticCurveTo(width * 0.45, height - 60, width * 0.55, height - 85);
+      ctx.quadraticCurveTo(width * 0.75, height - 120, width * 0.85, height - 70);
+      ctx.lineTo(width, height - 65);
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
 
       // --- 2. MARS TINY BLUE SUN (PHYSICAL PHENOMENON) ---
       // Sunset on Mars is blue due to fine dust scattering properties
@@ -659,6 +773,72 @@ export default function ProjectileSim({
         ctx.setLineDash([4, 6]);
         ctx.stroke();
         ctx.setLineDash([]);
+
+        // --- 7.2 CONSTANT TIME-INTERVAL VECTOR DECONSTRUCTION ---
+        // Draws vertical projection droplines and interval markers at 0.5s ticks to visually prove
+        // horizontal velocity independence (the spaced dots are horizontally equidistant).
+        const tickInterval = 0.5;
+        const maxTicks = 12;
+        
+        ctx.save();
+        for (let k = 1; k <= maxTicks; k++) {
+          const t = k * tickInterval;
+          const tx = previewVx * t;
+          const ty = (previewVy * t) - (0.5 * gravity * t * t);
+          
+          // Mountain collision check
+          const ridgeX = 400;
+          const ridgeWidth = 120;
+          const ridgePeakHeight = 140;
+          let mountainHeightAtX = 0;
+          if (Math.abs(tx - ridgeX) < ridgeWidth) {
+            const factor = 1 - Math.abs(tx - ridgeX) / ridgeWidth;
+            mountainHeightAtX = factor * ridgePeakHeight;
+          }
+          
+          if (ty < mountainHeightAtX || ty < 0) {
+            break; // Projectile has hit mountain or ground before this time
+          }
+          
+          const tcx = scaleX(tx);
+          const tcy = scaleY(ty);
+          const tcy0 = scaleY(0);
+          
+          // A. Draw vertical drop line
+          ctx.strokeStyle = "rgba(6, 182, 212, 0.15)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 4]);
+          ctx.beginPath();
+          ctx.moveTo(tcx, tcy);
+          ctx.lineTo(tcx, tcy0);
+          ctx.stroke();
+          
+          // B. Draw equidistant interval indicator dot
+          ctx.fillStyle = "rgba(6, 182, 212, 0.85)";
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.arc(tcx, tcy, 3, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // outer ring
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(tcx, tcy, 4.5, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // C. Chrono timestamp
+          ctx.fillStyle = "rgba(34, 211, 238, 0.85)";
+          ctx.font = "8px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText(`${t.toFixed(1)}s`, tcx, tcy - 8);
+          
+          // D. Constant delta X bracket marker on the ground
+          ctx.fillStyle = "rgba(103, 232, 249, 0.65)";
+          ctx.font = "bold 8px monospace";
+          ctx.fillText(`+${Math.round(previewVx * tickInterval)}m`, tcx, tcy0 + 11);
+        }
+        ctx.restore();
       }
 
       // --- 8. LAUNCHER RAILGUN PLATFORM WITH DIRECT SPATIAL DRAG ---
@@ -667,6 +847,7 @@ export default function ProjectileSim({
       const launcherY = scaleY(0);
       ctx.translate(launcherX, launcherY);
       ctx.rotate(-(angle * Math.PI) / 180);
+      ctx.translate(-recoilShiftRef.current, 0);
 
       // Barrel length is proportional to launch velocity
       const barrelLen = 55 + ((velocity - 30) / (150 - 30)) * 100;
@@ -852,25 +1033,106 @@ export default function ProjectileSim({
           }
 
           const isSuccess = px >= targetRange.min && px <= targetRange.max;
-          ctx.fillStyle = isSuccess ? "rgba(16, 185, 129, 0.95)" : "rgba(113, 113, 122, 0.9)";
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1.5;
-          ctx.fillRect(cx - 7, cy - 7, 14, 14);
-          ctx.strokeRect(cx - 7, cy - 7, 14, 14);
+          
+          if (isDualMassActive) {
+            // Draw BOTH resting side-by-side on the landing spot
+            ctx.save();
+            // 1. 10kg Wood Crate
+            ctx.fillStyle = "#b45309"; // wood orange
+            ctx.strokeStyle = "#f59e0b";
+            ctx.lineWidth = 1;
+            ctx.fillRect(cx - 14, cy - 10, 10, 10);
+            ctx.strokeRect(cx - 14, cy - 10, 10, 10);
+            // Draw wooden cross beam
+            ctx.beginPath();
+            ctx.moveTo(cx - 14, cy - 10); ctx.lineTo(cx - 4, cy);
+            ctx.moveTo(cx - 4, cy - 10); ctx.lineTo(cx - 14, cy);
+            ctx.stroke();
+
+            // 2. 500kg Iron Safe
+            ctx.fillStyle = "#374151"; // steel gray
+            ctx.strokeStyle = "#9ca3af";
+            ctx.lineWidth = 1;
+            ctx.fillRect(cx + 4, cy - 10, 10, 10);
+            ctx.strokeRect(cx + 4, cy - 10, 10, 10);
+            // Draw combination dial
+            ctx.fillStyle = "#111827";
+            ctx.beginPath();
+            ctx.arc(cx + 9, cy - 5, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          } else {
+            ctx.fillStyle = isSuccess ? "rgba(16, 185, 129, 0.95)" : "rgba(113, 113, 122, 0.9)";
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(cx - 7, cy - 7, 14, 14);
+            ctx.strokeRect(cx - 7, cy - 7, 14, 14);
+          }
         } else {
-          // ACTIVE CARGO BOX CANISTER
-          ctx.save();
-          ctx.shadowColor = "rgba(6, 182, 212, 0.9)";
-          ctx.shadowBlur = 12;
-          ctx.fillStyle = "rgba(6, 182, 212, 1)";
-          ctx.fillRect(cx - 5, cy - 5, 10, 10);
-          ctx.restore();
+          // ACTIVE FLYING PROJECTILE
+          if (isDualMassActive) {
+            ctx.save();
+            // Draw two objects flying in perfect parallel lockstep
 
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(cx - 5, cy - 5, 10, 10);
+            // Object 1: 10kg Wood Crate (offset slightly higher)
+            const cyWood = cy - 14;
+            ctx.fillStyle = "#b45309";
+            ctx.strokeStyle = "#f59e0b";
+            ctx.lineWidth = 1;
+            ctx.fillRect(cx - 6, cyWood - 6, 12, 12);
+            ctx.strokeRect(cx - 6, cyWood - 6, 12, 12);
+            // Draw cross beams
+            ctx.beginPath();
+            ctx.moveTo(cx - 6, cyWood - 6); ctx.lineTo(cx + 6, cyWood + 6);
+            ctx.moveTo(cx + 6, cyWood - 6); ctx.lineTo(cx - 6, cyWood + 6);
+            ctx.stroke();
 
-          // Vector analysis overlay (Horizontal vs Vertical arrows)
+            // Label for Wood Crate
+            ctx.fillStyle = "#f59e0b";
+            ctx.font = "bold 8px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("10kg Wood Crate", cx, cyWood - 9);
+
+            // Object 2: 500kg Iron Safe (offset slightly lower)
+            const cyIron = cy + 14;
+            ctx.fillStyle = "#374151";
+            ctx.strokeStyle = "#9ca3af";
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(cx - 6, cyIron - 6, 12, 12);
+            ctx.strokeRect(cx - 6, cyIron - 6, 12, 12);
+            // Combination lock dial and rivets
+            ctx.fillStyle = "#111827";
+            ctx.beginPath();
+            ctx.arc(cx, cyIron, 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Rivets
+            ctx.fillStyle = "#d1d5db";
+            ctx.fillRect(cx - 5, cyIron - 5, 1.5, 1.5);
+            ctx.fillRect(cx + 3.5, cyIron - 5, 1.5, 1.5);
+            ctx.fillRect(cx - 5, cyIron + 3.5, 1.5, 1.5);
+            ctx.fillRect(cx + 3.5, cyIron + 3.5, 1.5, 1.5);
+
+            // Label for Iron Safe
+            ctx.fillStyle = "#e5e7eb";
+            ctx.font = "bold 8px monospace";
+            ctx.fillText("500kg Iron Safe", cx, cyIron + 15);
+
+            ctx.restore();
+          } else {
+            // SINGLE ACTIVE CARGO BOX CANISTER
+            ctx.save();
+            ctx.shadowColor = "rgba(6, 182, 212, 0.9)";
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = "rgba(6, 182, 212, 1)";
+            ctx.fillRect(cx - 5, cy - 5, 10, 10);
+            ctx.restore();
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cx - 5, cy - 5, 10, 10);
+          }
+
+          // Vector analysis overlay (Horizontal vs Vertical arrows) - Drawn centered at (cx, cy)
           const vxVal = stateRef.current.vx;
           const vyVal = stateRef.current.vy;
           const vecScale = 0.55;
@@ -971,6 +1233,9 @@ export default function ProjectileSim({
         ctx.restore();
       }
 
+      // Pop the camera shake context
+      ctx.restore();
+
       animId = requestAnimationFrame(render);
     };
 
@@ -979,7 +1244,7 @@ export default function ProjectileSim({
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [readouts, targetRange, angle, velocity, gravity, isHovered, isDragging]);
+  }, [readouts, targetRange, angle, velocity, gravity, isHovered, isDragging, isDualMassActive, predictionFlagX, cognitiveLoopState]);
 
 
   return (
