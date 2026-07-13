@@ -699,6 +699,50 @@ export default function MissionActiveView() {
       } else {
         status = "OVERSHOT";
       }
+
+      // Spontaneous Socratic Mentor Feedback based on physical flight outcomes
+      setTimeout(() => {
+        let mentorText = "";
+        if (selectedMentor === "NEWTON") {
+          if (status === "CRASHED") {
+            mentorText = "The canister failed to clear the volcanic peak. Gravitational acceleration ($g = 3.72\\text{ m/s}^2$) has overcome the vertical speed before it could cross the Tharsis Ridge. We must apply more initial thrust or adjust our launch angle to gain altitude.";
+          } else if (status === "UNDERSHOT") {
+            mentorText = `The canister landed short at ${val} meters. Horizontal inertia was insufficient to sustain motion across the plains before gravity pulled the mass back to zero height. We must increase the initial velocity ($v_0$) or optimize the launch angle closer to the ideal 45 degrees.`;
+          } else if (status === "OVERSHOT") {
+            mentorText = `Excessive momentum! The canister overshot the target basin, landing at ${val} meters. The initial velocity was too great, carrying the cargo too far before gravitational pull finished its work. Reduce $v_0$ or increase the angle.`;
+          } else if (status === "SECURED") {
+            mentorText = "Superb! The canister has cleared the volcanic barrier and settled perfectly in the recovery basin. The math has aligned with physical truth. You have completed the challenge!";
+          }
+        } else if (selectedMentor === "FEYNMAN") {
+          if (status === "CRASHED") {
+            mentorText = "Boom! We slammed right into Tharsis Ridge! The peak of our curve was way too low to make it over. Try giving it a vertical kick by raising the angle, or just blast it faster so it climbs higher!";
+          } else if (status === "UNDERSHOT") {
+            mentorText = `Oops! We landed short at ${val}m. Try dialing up the muzzle velocity to carry it further, or check if your angle is close to 45 degrees for maximum distance! Let's get that cargo to the base!`;
+          } else if (status === "OVERSHOT") {
+            mentorText = `Wow, that sailed way too far, landing at ${val}m! We overshot into the far craters. Try toning down the velocity a bit, or adjust the angle to pull the range back.`;
+          } else if (status === "SECURED") {
+            mentorText = "Bullseye! That was a magnificent flight! It sailed right over the peak and landed perfectly in the zone! Check out how the constant horizontal speed and falling vertical speed curved into that beautiful parabola!";
+          }
+        } else { // Galileo Galilei
+          if (status === "CRASHED") {
+            mentorText = "Alas! Our supply canister has crashed into the basalt ridge of Tharsis at x = 400m. The vertical motion was exhausted before clearing the 140m summit. Should we intensify our muzzle velocity, or adjust the elevation angle to lift our parabola?";
+          } else if (status === "UNDERSHOT") {
+            mentorText = `The canister has landed safely, but fell short of the recovery basin at ${val} meters. To extend both horizontal inertia and vertical flight time, we must calibrate the launcher to a higher muzzle speed. What say you, young scholar?`;
+          } else if (status === "OVERSHOT") {
+            mentorText = `A breathtaking trajectory! Yet we have overshot the recovery basin, sailing past 820m. We must tame this momentum. Should we reduce our initial speed, or alter the launch angle to bring the cargo home?`;
+          } else if (status === "SECURED") {
+            if (isDualMassActive) {
+              mentorText = "A triumph! Did you observe the double flight? Though the iron safe pulled with 50 times the force of the wooden crate, their inertia resisted proportionately, keeping them in lockstep! They landed together, proving that in vacuo, gravity falls equally on all!";
+            } else {
+              mentorText = "A magnificent parabola! The canister cleared the high volcanic peak and landed precisely in the target basin. You have proven that independent horizontal and vertical motions couple into a perfect mathematical path. Magnificent!";
+            }
+          }
+        }
+
+        if (mentorText) {
+          setChatLog((prev) => [...prev, { sender: "MENTOR", text: mentorText }]);
+        }
+      }, 1000);
     } else if (mission.coreInteraction === "TITRATION_BALANCE") {
       const baseMolar = simParameters["baseMolarity"] || 0.1;
       const dripVol = simParameters["dripVolume"] || 30;
@@ -981,6 +1025,14 @@ export default function MissionActiveView() {
                                   mission.predictionPresets.forEach(p => {
                                     if (p.misconceptionId) removeMisconception(p.misconceptionId);
                                   });
+                                }
+
+                                if (preset.id === "mass-float" || preset.id === "mass-heavy") {
+                                  // Spontaneous mentor reaction on predicting mass-dependency
+                                  setTimeout(() => {
+                                    const text = "Ah, a classic thought, young scholar! You hypothesize that mass alters the rate of fall. Aristotle believed the same! I have calibrated a special comparative dual-mass track on your stage. Let us run the experiment and observe both the 10kg Wood Crate and 500kg Iron Safe fly side-by-side!";
+                                    setChatLog((prev) => [...prev, { sender: "MENTOR", text }]);
+                                  }, 600);
                                 }
                               }}
                               className="mt-0.5 accent-cyan-400"
