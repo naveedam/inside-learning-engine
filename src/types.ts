@@ -51,7 +51,7 @@ export interface Mission {
     description: string;
     equationLatex?: string;
   };
-  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS";
+  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS" | "INERTIA_BOUNDS";
   predictionPrompt: string;
   predictionPresets: {
     id: string;

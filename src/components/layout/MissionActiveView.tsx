@@ -468,6 +468,218 @@ export default function MissionActiveView() {
           ctx.stroke();
         }
       }
+    } else if (mission.coreInteraction === "INERTIA_BOUNDS") {
+      const mass = simParameters["mass"] || 200;
+      const tAcc = simParameters["forwardDuration"] || 2.0;
+      const tGlide = simParameters["glideDuration"] || 4.0;
+      const tDec = simParameters["reverseDuration"] || 2.0;
+
+      const a = 1000 / mass;
+      const vMax = a * tAcc;
+
+      let t = 0;
+      if (simProgress >= 0) {
+        t = (tAcc + tGlide + tDec) * simProgress;
+      } else if (launches.length > 0) {
+        t = tAcc + tGlide + tDec;
+      } else {
+        t = 0;
+      }
+
+      // Compute position and velocity at time t
+      let posX = 0;
+      let v = 0;
+      let activeEngine: "none" | "forward" | "reverse" = "none";
+
+      if (t <= tAcc) {
+        v = a * t;
+        posX = 0.5 * a * t * t;
+        activeEngine = t > 0 ? "forward" : "none";
+      } else if (t <= tAcc + tGlide) {
+        v = vMax;
+        posX = 0.5 * a * tAcc * tAcc + vMax * (t - tAcc);
+        activeEngine = "none";
+      } else {
+        const dt = t - (tAcc + tGlide);
+        const maxGlideX = 0.5 * a * tAcc * tAcc + vMax * tGlide;
+        v = vMax - a * dt;
+        posX = maxGlideX + vMax * dt - 0.5 * a * dt * dt;
+        activeEngine = dt < tDec ? "reverse" : "none";
+      }
+
+      const surfaceY = height - 40;
+
+      // Draw shiny Europa ice surface
+      const groundGrad = ctx.createLinearGradient(0, surfaceY, 0, height);
+      groundGrad.addColorStop(0, "rgba(56, 189, 248, 0.15)");
+      groundGrad.addColorStop(1, "rgba(15, 23, 42, 0.8)");
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, surfaceY, width, height - surfaceY);
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.3)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, surfaceY);
+      ctx.lineTo(width, surfaceY);
+      ctx.stroke();
+
+      // Thermal Shelter (Docking Zone) at 60m
+      const zoneX1 = 40 + 58 * 7.0;
+      const zoneWidth = 4 * 7.0; // 58 to 62 is 4m
+      ctx.fillStyle = "rgba(245, 158, 11, 0.08)";
+      ctx.fillRect(zoneX1, surfaceY - 10, zoneWidth, 10);
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.5)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(zoneX1, surfaceY - 10, zoneWidth, 10);
+
+      // Warm glowing dome representing the Thermal Shelter
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.3)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 2]);
+      ctx.beginPath();
+      ctx.arc(40 + 60 * 7.0, surfaceY, 35, Math.PI, 0); // half dome
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      ctx.fillStyle = "#f59e0b";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText("THERMAL SHELTER (60m)", 40 + 60 * 7.0 - 55, surfaceY - 42);
+
+      // Draw Uniform Inertial Beacon Ribbon at fixed 0.5s time intervals
+      const maxIntervals = Math.floor(t / 0.5);
+      for (let i = 1; i <= maxIntervals; i++) {
+        const dropT = i * 0.5;
+        let dx = 0;
+        if (dropT <= tAcc) {
+          dx = 0.5 * a * dropT * dropT;
+        } else if (dropT <= tAcc + tGlide) {
+          dx = 0.5 * a * tAcc * tAcc + vMax * (dropT - tAcc);
+        } else {
+          const dt = dropT - (tAcc + tGlide);
+          const maxGlideX = 0.5 * a * tAcc * tAcc + vMax * tGlide;
+          dx = maxGlideX + vMax * dt - 0.5 * a * dt * dt;
+        }
+        const bx = 40 + dx * 7.0;
+
+        // Draw glowing emerald beacon diamond
+        ctx.fillStyle = "rgba(16, 185, 129, 0.85)";
+        ctx.beginPath();
+        ctx.moveTo(bx, surfaceY);
+        ctx.lineTo(bx - 3, surfaceY - 4);
+        ctx.lineTo(bx, surfaceY - 8);
+        ctx.lineTo(bx + 3, surfaceY - 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw vertical beacon line
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.2)";
+        ctx.setLineDash([1, 2]);
+        ctx.beginPath();
+        ctx.moveTo(bx, surfaceY - 8);
+        ctx.lineTo(bx, surfaceY - 22);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Draw scale tick marks every 10m on the surface
+      ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.font = "7px monospace";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.lineWidth = 1;
+      for (let m = 0; m <= 80; m += 10) {
+        const mx = 40 + m * 7.0;
+        ctx.beginPath();
+        ctx.moveTo(mx, surfaceY);
+        ctx.lineTo(mx, surfaceY + 4);
+        ctx.stroke();
+        ctx.fillText(`${m}m`, mx - 6, surfaceY + 12);
+      }
+
+      // The Rover Arion
+      let canvasX = 40 + posX * 7.0;
+      if (canvasX < 40) canvasX = 40;
+      if (canvasX > width - 20) canvasX = width - 20;
+
+      // Nozzle backplates
+      ctx.fillStyle = "#475569";
+      ctx.fillRect(canvasX - 18, surfaceY - 19, 3, 8);
+      ctx.fillRect(canvasX + 15, surfaceY - 19, 3, 8);
+
+      // Thruster flame if active
+      if (activeEngine === "forward") {
+        ctx.fillStyle = "#06b6d4";
+        ctx.beginPath();
+        ctx.moveTo(canvasX - 18, surfaceY - 19);
+        ctx.lineTo(canvasX - 32 - Math.random() * 12, surfaceY - 15);
+        ctx.lineTo(canvasX - 18, surfaceY - 11);
+        ctx.closePath();
+        ctx.fill();
+      } else if (activeEngine === "reverse") {
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.moveTo(canvasX + 18, surfaceY - 19);
+        ctx.lineTo(canvasX + 32 + Math.random() * 12, surfaceY - 15);
+        ctx.lineTo(canvasX + 18, surfaceY - 11);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Chassis
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillRect(canvasX - 15, surfaceY - 22, 30, 14);
+
+      // Wheels
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.arc(canvasX - 10, surfaceY - 4, 4, 0, Math.PI * 2);
+      ctx.arc(canvasX + 10, surfaceY - 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main sensor dome
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(canvasX, surfaceY - 22, 6, Math.PI, 0);
+      ctx.fill();
+
+      // Emerald Velocity Vector (The Visual Truth)
+      if (v !== 0) {
+        const arrowLen = v * 5.0;
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(canvasX, surfaceY - 15);
+        ctx.lineTo(canvasX + arrowLen, surfaceY - 15);
+        ctx.stroke();
+
+        const dir = v > 0 ? 1 : -1;
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath();
+        ctx.moveTo(canvasX + arrowLen, surfaceY - 15);
+        ctx.lineTo(canvasX + arrowLen - dir * 5, surfaceY - 18);
+        ctx.lineTo(canvasX + arrowLen - dir * 5, surfaceY - 12);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#10b981";
+        ctx.font = "bold 8px monospace";
+        ctx.fillText(`v = ${v.toFixed(1)} m/s`, canvasX + (v > 0 ? 5 : -45), surfaceY - 25);
+      }
+
+      // HUD overlay
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.fillRect(10, 15, 240, 56);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(10, 15, 240, 56);
+
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText("📡 EUROPA ARION TELEMETRY LINK", 16, 26);
+
+      ctx.font = "7px monospace";
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText(`NET FORCE : ${activeEngine === "none" ? "0 N (ENGINE DARK)" : activeEngine === "forward" ? "1000 N (FORWARD THRUST)" : "-1000 N (BRAKING THRUST)"}`, 16, 36);
+      ctx.fillText(`VELOCITY  : ${v.toFixed(1)} m/s`, 16, 45);
+      ctx.fillText(`POSITION  : ${posX.toFixed(1)} m  /  60.0 m TARGET`, 16, 54);
     } else if (mission.coreInteraction === "TITRATION_BALANCE") {
       // Chemistry Titration setup drawing
       const baseMolar = simParameters["baseMolarity"] || 0.1;
@@ -788,6 +1000,86 @@ export default function MissionActiveView() {
       } else {
         status = "STABLE";
       }
+    } else if (mission.coreInteraction === "INERTIA_BOUNDS") {
+      const mass = simParameters["mass"] || 200;
+      const tAcc = simParameters["forwardDuration"] || 2.0;
+      const tGlide = simParameters["glideDuration"] || 4.0;
+      const tDec = simParameters["reverseDuration"] || 2.0;
+
+      const a = 1000 / mass;
+      const vMax = a * tAcc;
+      const vFinal = vMax - a * tDec;
+
+      const dAcc = 0.5 * a * tAcc * tAcc;
+      const dGlide = vMax * tGlide;
+      const dDec = vMax * tDec - 0.5 * a * tDec * tDec;
+      const totalDistance = dAcc + dGlide + dDec;
+
+      val = Number(totalDistance.toFixed(1));
+      label = `${val}m Position, v_final = ${vFinal.toFixed(1)} m/s`;
+
+      const vFinalZero = Math.abs(vFinal) < 0.01;
+      if (vFinalZero && val >= 58 && val <= 62) {
+        status = "SECURED";
+        isSuccess = true;
+      } else if (!vFinalZero) {
+        status = "UNDERSHOT";
+        isSuccess = false;
+        if (vFinal > 0) {
+          label = `Never Stopped! Drifting Forward (v_final = ${vFinal.toFixed(1)} m/s)`;
+        } else {
+          label = `Over-Braked! Drifting Backward (v_final = ${vFinal.toFixed(1)} m/s)`;
+        }
+      } else {
+        isSuccess = false;
+        if (val < 58) {
+          status = "UNDERSHOT";
+          label = `Stopped Short at ${val}m`;
+        } else {
+          status = "OVERSHOT";
+          label = `Overshot Shelter at ${val}m`;
+        }
+      }
+
+      // Spontaneous mentor reaction for Inertia Bounds
+      setTimeout(() => {
+        let mentorText = "";
+        if (selectedMentor === "NEWTON") {
+          if (status === "SECURED") {
+            mentorText = "Superb! The forward and reverse impulses ($F \\cdot t$) are exactly equal and opposite, cancelling the rover's momentum perfectly ($p = 0$) at the 60m threshold. Newton's Laws are fully demonstrated!";
+          } else if (!vFinalZero) {
+            if (vFinal > 0) {
+              mentorText = `The rover is drifting forward at ${vFinal.toFixed(1)} m/s because your reverse braking impulse was insufficient to cancel the forward momentum. Net force is zero during the drift, so velocity remains constant!`;
+            } else {
+              mentorText = `The rover is drifting backward at ${Math.abs(vFinal).toFixed(1)} m/s. Your reverse thruster fired for too long, introducing an excess negative force that created backward momentum.`;
+            }
+          } else if (val < 58) {
+            mentorText = `The rover came to a complete halt, but short of the station at ${val} meters. Its momentum was cancelled perfectly, but you did not let it drift long enough. Increase the Glide Duration ($t_{\\text{glide}}$) to let inertia carry it further.`;
+          } else {
+            mentorText = `A perfect halt, but you overshot the shelter, landing at ${val} meters. The glide duration was too long, carrying the rover past the target before braking. Reduce the Glide Duration.`;
+          }
+        } else if (selectedMentor === "FEYNMAN") {
+          if (status === "SECURED") {
+            mentorText = "Unbelievable! You nailed the landing! It drifted completely friction-free and stopped on a dime! See how the exact same oomph (force * time) forward and backward kills the speed perfectly? Physics in action!";
+          } else if (!vFinalZero) {
+            mentorText = "Whoops, it's still moving! Remember, since there's no friction to stop it, it'll slide forever at constant speed. You need the exact same braking time as your forward push to bring it to a total standstill!";
+          } else {
+            mentorText = `Hey! The rover stopped completely at ${val}m, but missed the dome. You got the speeds balanced, but the timing was off! Adjust the Glide Duration slider to shift where it stops!`;
+          }
+        } else { // Galileo Galilei
+          if (status === "SECURED") {
+            mentorText = "A wonderful demonstration! On the frictionless plains of Europa, we see nature's true simplicity: uniform lateral motion persists endlessly without decay, until our counter-push arrests it.";
+          } else if (!vFinalZero) {
+            mentorText = "Fascinating! Notice how the speed does not diminish once the engine shuts off. Without friction, motion has no natural end. To stop it, we must match the original forward impulse precisely.";
+          } else {
+            mentorText = `The state of rest is achieved, but the position is incorrect. To change the resting coordinates on this frictionless canvas, we must adjust the duration of unpowered inertial drift.`;
+          }
+        }
+
+        if (mentorText) {
+          setChatLog((prev) => [...prev, { sender: "MENTOR", text: mentorText }]);
+        }
+      }, 1000);
     }
 
     // Save trial outcome in telemetry list
@@ -944,7 +1236,7 @@ export default function MissionActiveView() {
                   {dialStep.content.dialogue?.map((seg, i) => (
                     <div key={i} className="flex gap-4 items-start p-4 rounded-2xl border border-white/5 bg-white/[0.01]">
                       <div className="w-10 h-10 rounded-xl bg-gray-950 border border-white/10 flex items-center justify-center text-lg shrink-0 shadow-inner">
-                        {seg.avatar === "GALILEO" ? "🔭" : seg.avatar === "CURIE" ? "🧪" : "🏛️"}
+                        {seg.avatar === "GALILEO" ? "🔭" : seg.avatar === "NEWTON" ? "🍎" : seg.avatar === "FEYNMAN" ? "🥁" : seg.avatar === "CURIE" ? "🧪" : "🏛️"}
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="font-mono text-[9px] text-cyan-400 font-bold">{seg.speaker}</span>
