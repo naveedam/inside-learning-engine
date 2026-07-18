@@ -87,6 +87,9 @@ export default function MissionActiveView() {
       });
       setSimParameters(defaults);
       setLaunches([]);
+      setSelectedPresetId("");
+      setRationaleText("");
+      setReflectionText("");
     }
   }, [activeMissionId, mission]);
 
@@ -162,7 +165,8 @@ export default function MissionActiveView() {
             codename: mission.codename,
             params: simParameters,
             activeMisconceptions,
-            cognitiveState: cognitiveLoopState
+            cognitiveState: cognitiveLoopState,
+            predictionPresetId: selectedPresetId
           }
         })
       });
@@ -1350,6 +1354,77 @@ export default function MissionActiveView() {
                           if (!selectedPresetId) return;
                           commitPrediction(0, 0, rationaleText);
                           globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+
+                          // Custom pre-experiment mentor response for Expedition 02 (Newton's First Law / INERTIA_BOUNDS)
+                          if (mission.coreInteraction === "INERTIA_BOUNDS") {
+                            let preResponseText = "";
+                            if (selectedMentor === "NEWTON") {
+                              if (selectedPresetId === "inertia-slow") {
+                                preResponseText = "An intriguing hypothesis. You expect the rover's quantity of motion to decay without a constant impressed force. Let us fire the thrusters and observe: does the speed decay, or does uniform inertia sustain its course?";
+                              } else if (selectedPresetId === "inertia-instant") {
+                                preResponseText = "To halt instantly implies an infinite negative force applied in an infinitesimal moment. Let us test if momentum can vanish so abruptly. Initiate the experiment, and track the velocity vector when the flame dies.";
+                              } else {
+                                preResponseText = "Indeed! You foresee the true nature of inertia. In the absence of external resistance, a body should persist in its state of uniform motion. Let us execute the launch and verify this mathematical truth.";
+                              }
+                            } else if (selectedMentor === "FEYNMAN") {
+                              if (selectedPresetId === "inertia-slow") {
+                                preResponseText = "A lot of people think that things naturally slow down unless you keep pushing them! But wait till you see what happens out on this super-smooth Jovian ice! Launch the rover and watch that speed vector!";
+                              } else if (selectedPresetId === "inertia-instant") {
+                                preResponseText = "Instantly stop? Whoa, that would be a crazy crash! Newton's got a law about things wanting to keep doing what they're already doing. Let's send the rover out and see if it stops, or keeps on cruising!";
+                              } else {
+                                preResponseText = "Spot on! With zero friction, there's absolutely nothing to stop it! It should just sail along at a steady clip forever. Let's run the trial and watch those emerald vectors lock in!";
+                              }
+                            } else { // GALILEO or default
+                              if (selectedPresetId === "inertia-slow") {
+                                preResponseText = "You anticipate the rover will rest once the push ceases, as objects seem to do on Earth. But let us test this on the pure ice of Europa, where no earthly friction resides. Launch and observe the geometry of its flight!";
+                              } else if (selectedPresetId === "inertia-instant") {
+                                preResponseText = "Nature abhors instant changes of state. Let us put your hypothesis to the test: when the engine light fades, does the Arion rover freeze in place, or does it glide onward? Fire the thrusters and watch the beacon ribbon!";
+                              } else {
+                                preResponseText = "A masterful prediction! You have seen past the illusions of earthly friction to the eternal geometry of motion. Let us launch the rover and observe the perfect, equal spacing of the beacon drops!";
+                              }
+                            }
+                            setChatLog((prev) => [
+                              ...prev,
+                              { sender: "MENTOR", text: preResponseText }
+                            ]);
+                          } else if (mission.coreInteraction === "PROJECTILE_AIMING") {
+                            let preResponseText = "";
+                            if (selectedMentor === "NEWTON") {
+                              if (selectedPresetId === "mass-float") {
+                                preResponseText = "You expect lighter bodies to drift further, perhaps feeling gravity's pull less intensely. But wait: does gravity favor lightness, or does the resistance of mass compensate perfectly? Let us launch and discover!";
+                              } else if (selectedPresetId === "mass-heavy") {
+                                preResponseText = "A heavy safe is pulled by fifty-fold more force, yes, but its inertia resists that pull by fifty-fold as well! Let us test if mass has any dominion over the rate of fall under gravity. Launch the dual-payload rails.";
+                              } else if (selectedPresetId === "mass-equal") {
+                                preResponseText = "Superb! You understand that gravity exerts a force directly proportional to mass, while inertia resists in equal proportion. Thus, all bodies fall together. Let us launch and see this beautiful cancelation in action!";
+                              } else { // angle-45
+                                preResponseText = "An elevation of 45 degrees! A classic mathematical projection. It decomposes initial speed into equal orthogonal components. Let us verify if this splits horizontal drift and vertical time-of-flight to maximize the range.";
+                              }
+                            } else if (selectedMentor === "FEYNMAN") {
+                              if (selectedPresetId === "mass-float") {
+                                preResponseText = "Ah, you think lighter things float more and get more distance? That's a classic intuition! Let's fire up the double tracks and see how a lightweight lithium container compares to a massive iron safe in Martian gravity.";
+                              } else if (selectedPresetId === "mass-heavy") {
+                                preResponseText = "You're predicting that a big, heavy iron safe will fall like a rock while the wood crate floats along! That makes perfect everyday sense. But physics has a mind-bending surprise for you. Let's run the launch and see if they split up!";
+                              } else if (selectedPresetId === "mass-equal") {
+                                preResponseText = "Boom! You got it. In a vacuum, gravity treats everything exactly the same! A heavy safe and a wooden crate should fly perfectly synchronized. Let's run the dual-launch and watch them trace the exact same line!";
+                              } else { // angle-45
+                                preResponseText = "Ooh, 45 degrees! The ultimate compromise angle! Half your energy goes into soaring high, and the other half goes into racing forward. Let's launch and see if that sweet spot carries our supplies all the way to the safety zone!";
+                              }
+                            } else { // GALILEO or default
+                              if (selectedPresetId === "mass-float") {
+                                preResponseText = "You hypothesize that the wood crate will outrun the heavy iron safe. Let us test this on the plains of Mars, where the air is thin and free of earthly drag. Fire the dual-mass launcher and witness the truth of motion!";
+                              } else if (selectedPresetId === "mass-heavy") {
+                                preResponseText = "You suspect that heavier bodies fall faster. This was the belief of the ancient schoolmen for two thousand years! Let us put it to the test: when they fly across the basalt mountain, does the iron outstrip the wood, or do they share one destiny?";
+                              } else if (selectedPresetId === "mass-equal") {
+                                preResponseText = "You have grasped the eternal truth! Weight is but a force, and motion is independent of the quantity of matter when gravity alone governs. Let us launch the dual-mass capsules and behold Galileo's proof written in Mars' red sky.";
+                              } else { // angle-45
+                                preResponseText = "The angle of maximum projection! You expect 45 degrees to find the perfect geometric balance of vertical lift and horizontal progress. Let us launch the cargo and map the parabola!";
+                              }
+                            }
+                            setChatLog((prev) => [
+                              ...prev,
+                              { sender: "MENTOR", text: preResponseText }
+                            ]);
+                          }
                         }}
                         disabled={!selectedPresetId}
                         className={`w-full py-2.5 rounded-xl text-xs font-mono font-bold transition-all ${
@@ -1386,6 +1461,77 @@ export default function MissionActiveView() {
                             onClick={() => {
                               useEngineStore.getState().setCognitiveLoopState("REFLECT");
                               globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
+
+                              // Custom post-experiment reflection mentor response for Expedition 02 (INERTIA_BOUNDS)
+                              if (mission.coreInteraction === "INERTIA_BOUNDS") {
+                                let postResponseText = "";
+                                if (selectedMentor === "NEWTON") {
+                                  if (selectedPresetId === "inertia-slow") {
+                                    postResponseText = "Observe, Cadet! Although the engine ceased firing, the speed of Arion did not decay by even a single millimeter per second. It drifted with uniform speed, dropping beacons of identical intervals. This directly contradicts your prediction that it would slow down. Reflect on why the velocity persisted when the force was zero.";
+                                  } else if (selectedPresetId === "inertia-instant") {
+                                    postResponseText = "Observe the telemetry: Arion did not halt when the force went to zero. Its momentum persisted, and it glided smoothly across the Jovian plains. An instantaneous deceleration would require an infinite backward force. Since net force was simply zero, why did its speed remain perfectly uniform?";
+                                  } else {
+                                    postResponseText = "Superb observation! The telemetry perfectly vindicates your prediction. During the unpowered glide, the net force was zero, yet the rover glided at a constant velocity, dropping beacons with exact, equal spacing. Explain in your own words how this demonstrates the law of inertia.";
+                                  }
+                                } else if (selectedMentor === "FEYNMAN") {
+                                  if (selectedPresetId === "inertia-slow") {
+                                    postResponseText = "Look at that! Even when the engine went dark, the rover didn't slow down at all! It just kept cruising at that constant speed. That's Newton's First Law right there! Since the ice has zero friction, there's no force pushing back on it. Do you see how the distance between those beacons stayed exactly the same?";
+                                  } else if (selectedPresetId === "inertia-instant") {
+                                    postResponseText = "Wow, did you see that drift? The rover didn't just freeze when the thruster went dark! It sailed along at that top speed! Things in motion really want to stay in motion! Look at the emerald velocity vector—it didn't shrink a bit until the brakes fired. How does this compare to what you expected?";
+                                  } else {
+                                    postResponseText = "You nailed it! Since there's absolutely zero friction, nothing can slow it down once the thruster cuts out. It just glides at a constant speed forever. Neat, right?";
+                                  }
+                                } else { // GALILEO or default
+                                  if (selectedPresetId === "inertia-slow") {
+                                    postResponseText = "A marvelous sight! The speed did not decrease once the thrust vanished, but remained perfectly constant. Observe the beacon ribbon: they are spaced with absolute geometric precision! Why did your prediction of deceleration fail? Recall that friction is the only thief of motion.";
+                                  } else if (selectedPresetId === "inertia-instant") {
+                                    postResponseText = "Behold! No sudden stop occurred. The rover glided forward across the ice with steady, unbroken speed. Nature does not leap; its velocities flow smoothly. Consider why the uniform spacing of the beacons proves that force is not required to maintain motion.";
+                                  } else {
+                                    postResponseText = "A triumph for your hypothesis! As we saw, the uniform velocity remained untouched once the thrust died, drawing a flawless geometric line of equally spaced beacons. Reflect on why this celestial ice field reveals the truth of inertia that Earth's friction always hides.";
+                                  }
+                                }
+                                setChatLog((prev) => [
+                                  ...prev,
+                                  { sender: "MENTOR", text: postResponseText }
+                                ]);
+                              } else if (mission.coreInteraction === "PROJECTILE_AIMING") {
+                                let postResponseText = "";
+                                if (selectedMentor === "NEWTON") {
+                                  if (selectedPresetId === "mass-float") {
+                                    postResponseText = "Look at the telemetry! The lighter wood crate did not drift a single millimeter further than the iron safe. They landed in exact unison. Gravity's force was smaller on the wood, yes, but its inertia was lighter too, meaning the resulting acceleration is identical. Reflect on how this cancellation invalidates your buoyancy prediction.";
+                                  } else if (selectedPresetId === "mass-heavy") {
+                                    postResponseText = "Behold the telemetry: despite having fifty times the mass, the iron safe did not outstrip the lighter wooden crate by even a fraction of a second. The twin forces and inertias cancelled each other perfectly. Explain why mass did not affect the flight trajectory.";
+                                  } else if (selectedPresetId === "mass-equal") {
+                                    postResponseText = "A flawless validation! The telemetry shows the iron safe and wood crate landing in perfect coincidence, proving that mass cancels out of the equations of motion. Reflect on how this balance of gravity and inertia creates this universal harmony.";
+                                  } else { // angle-45
+                                    postResponseText = "The range formula holds true! At 45 degrees, the projectile reached its maximum possible horizontal range for this launch speed. Observe how higher angles gain height but lose forward speed, while lower angles land too soon. Explain how the orthogonal vectors balance here.";
+                                  }
+                                } else if (selectedMentor === "FEYNMAN") {
+                                  if (selectedPresetId === "mass-float") {
+                                    postResponseText = "Whoa, did you see that? Even though the lithium-wood crate is super light, it didn't drift any further! It landed at the exact same spot as that giant iron safe! In a vacuum, there's no air resistance to make light things float. How does that make you feel about your prediction?";
+                                  } else if (selectedPresetId === "mass-heavy") {
+                                    postResponseText = "Check that out! The iron safe is fifty times heavier, but it didn't touch down a single microsecond earlier than the wood crate! They stayed locked together like best friends. All things fall at the same rate when you take away the air. Why does that happen?";
+                                  } else if (selectedPresetId === "mass-equal") {
+                                    postResponseText = "They landed together! Absolute magic! It doesn't matter if it's wood or iron, gravity drags them down with the exact same acceleration. Your prediction was 100% correct! How does it feel to see Galileo's famous experiment play out in real time?";
+                                  } else { // angle-45
+                                    postResponseText = "Perfect hit! 45 degrees was exactly the sweet spot to clear that basalt ridge and hit the landing zone. If you went higher, you'd waste energy going up. If lower, you'd crash into the mountain. How does this balance of up-and-forward make sense to you?";
+                                  }
+                                } else { // GALILEO or default
+                                  if (selectedPresetId === "mass-float") {
+                                    postResponseText = "Behold! The lighter wood and the heavy iron safe traced the same glorious curve. Your expectation of buoyancy was a shadow of Earth's air. Here in the thin air of Mars, weight is nothing. Reflect on why the paths remained perfectly matched.";
+                                  } else if (selectedPresetId === "mass-heavy") {
+                                    postResponseText = "Observe! The schoolmen of old are proven wrong once more. The iron safe and the wooden crate fell in absolute harmony, striking the red sands together. Why did your prediction of a faster fall fail? Think on the balance of weight and inertia.";
+                                  } else if (selectedPresetId === "mass-equal") {
+                                    postResponseText = "A magnificent triumph! The telemetry records show both bodies describing the same geometric parabola, landing at the exact same coordinate. You have seen Galileo's truth on another world. Explain why mass is powerless to change the trajectory.";
+                                  } else { // angle-45
+                                    postResponseText = "A beautiful parabolic path! By choosing 45 degrees, you achieved the perfect geometric splitting of horizontal and vertical speeds, maximizing your reach. Reflect on why other angles fail to achieve this spatial harmony.";
+                                  }
+                                }
+                                setChatLog((prev) => [
+                                  ...prev,
+                                  { sender: "MENTOR", text: postResponseText }
+                                ]);
+                              }
                             }}
                             className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-xl font-mono text-[11px] font-bold"
                           >
@@ -1396,7 +1542,7 @@ export default function MissionActiveView() {
                     </div>
                   )}
 
-                  {cognitiveLoopState === "REFLECT" && (
+                   {cognitiveLoopState === "REFLECT" && (
                     <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
                       {isDualMassActive ? (
                         <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-950/15 flex flex-col gap-2 font-mono text-xs text-amber-200">
@@ -1404,16 +1550,78 @@ export default function MissionActiveView() {
                             <span>💡</span> GALILEO'S PARADOX UNCOVERED
                           </span>
                           <p className="leading-relaxed text-[11px] text-gray-300">
-                            You observed the <strong className="text-white">10kg Wood Crate</strong> and <strong className="text-white">500kg Iron Safe</strong> glide side-by-side in perfect lockstep, landing together at the exact same moment!
+                            {selectedPresetId === "mass-float" ? (
+                              <>
+                                You predicted that the <strong className="text-white">lighter wood/lithium crate would travel further because it is buoyant</strong>. However, the telemetry shows the 10kg Wood Crate and 500kg Iron Safe sailed in perfect lockstep, landing at the exact same coordinates!
+                              </>
+                            ) : selectedPresetId === "mass-heavy" ? (
+                              <>
+                                You predicted that the <strong className="text-white">heavy Iron Safe would fall much faster under Mars gravity</strong>. However, the telemetry shows the 10kg Wood Crate and 500kg Iron Safe sailed in perfect lockstep, landing at the exact same coordinates!
+                              </>
+                            ) : (
+                              <>
+                                You observed the <strong className="text-white">10kg Wood Crate</strong> and <strong className="text-white">500kg Iron Safe</strong> glide side-by-side in perfect lockstep, landing together at the exact same moment!
+                              </>
+                            )}
                           </p>
                           <p className="text-[10px] text-amber-300/80 leading-normal border-t border-white/5 pt-2 mt-1">
                             Why does the 500kg safe, which is pulled down by 50 times more gravitational force, not outrun the 10kg crate? How does inertia play a role? State your findings below:
                           </p>
                         </div>
                       ) : (
-                        <p className="font-mono text-xs text-cyan-300 leading-relaxed bg-cyan-950/20 border border-cyan-500/10 p-3 rounded-xl">
-                          Analyze your telemetry logs. Explain what you discovered regarding this relationship:
-                        </p>
+                        <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-950/15 flex flex-col gap-2 font-mono text-xs text-cyan-200">
+                          <span className="text-[9px] font-bold uppercase text-cyan-400 tracking-wider flex items-center gap-1">
+                            <span>💡</span> {mission.coreInteraction === "INERTIA_BOUNDS" ? "NEWTON'S COGNITIVE ALIGNMENT" : "TRAJECTORY COGNITIVE ALIGNMENT"}
+                          </span>
+                          <p className="leading-relaxed text-[11px] text-gray-300">
+                            {mission.coreInteraction === "INERTIA_BOUNDS" ? (
+                              selectedPresetId === "inertia-slow" ? (
+                                <>
+                                  You predicted that the <strong className="text-white">rover would slowly decelerate and stop</strong> once thrust became zero. However, looking at the telemetry logs and the emerald velocity vector, the speed remained perfectly constant during the unpowered glide, dropping a uniform ribbon of beacons!
+                                </>
+                              ) : selectedPresetId === "inertia-instant" ? (
+                                <>
+                                  You predicted that the <strong className="text-white">rover would instantly drop to zero velocity</strong> once the engine went dark. Yet, the telemetry shows the rover continued to drift smoothly at its top velocity, dropping beacons at identical intervals.
+                                </>
+                              ) : (
+                                <>
+                                  You predicted that the <strong className="text-white">rover would drift at constant velocity</strong> because there is no friction to slow it down. This is the essence of Newton's First Law!
+                                </>
+                              )
+                            ) : (
+                              selectedPresetId === "mass-equal" ? (
+                                <>
+                                  You predicted that <strong className="text-white">gravity is independent of mass</strong> and the arcs would be identical. This was perfectly proven when both crates traced the exact same parabola!
+                                </>
+                              ) : selectedPresetId === "angle-45" ? (
+                                <>
+                                  You predicted that a <strong className="text-white">45° launch angle splits velocity components equally</strong> to produce the maximum range. The telemetry logs confirm this mathematical optimum!
+                                </>
+                              ) : (
+                                "Analyze your telemetry logs. Explain what you discovered regarding this relationship:"
+                              )
+                            )}
+                          </p>
+                          <p className="text-[10px] text-cyan-300/80 leading-normal border-t border-white/5 pt-2 mt-1">
+                            {mission.coreInteraction === "INERTIA_BOUNDS" ? (
+                              selectedPresetId === "inertia-slow" ? (
+                                "Explain why the rover did not slow down even though there was zero net force acting on it. How does the lack of friction support Newton's First Law?"
+                              ) : selectedPresetId === "inertia-instant" ? (
+                                "Reflect on why the rover's motion persisted even when force became zero. Why is an instantaneous stop physically impossible without an opposing force?"
+                              ) : (
+                                "Explain how your prediction matches the uniform spacing of the beacon ribbon and the persistent emerald velocity vector during the glide phase."
+                              )
+                            ) : (
+                              selectedPresetId === "mass-equal" ? (
+                                "Reflect on why gravity pulls harder on the heavier safe, yet it falls at the exact same rate as the light wood crate."
+                              ) : selectedPresetId === "angle-45" ? (
+                                "Reflect on why an angle higher or lower than 45° reduces the horizontal range under a constant gravitational pull."
+                              ) : (
+                                "State your findings below:"
+                              )
+                            )}
+                          </p>
+                        </div>
                       )}
 
                       <div className="flex flex-col gap-1.5">

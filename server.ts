@@ -49,6 +49,13 @@ CRITICAL INSTRUCTIONS:
 const offlineSocraticReplies: Record<string, Array<{ keywords: string[]; replies: string[] }>> = {
   GALILEO: [
     {
+      keywords: ["inertia", "friction", "drift", "beacon", "glide", "rover", "stop"],
+      replies: [
+        "Ah! You observe the Arion rover. Notice how its speed remains eternal once the engine goes dark on the frictionless ice of Europa. This is the pure geometry of inertia! The beacons are spaced with flawless mathematical precision.",
+        "Consider this: if no earthly friction resides on this ice to rob the rover of its speed, why should it ever slow down? The emerald velocity vector stays constant. Does this not show that force is only needed to change motion, not to maintain it?"
+      ]
+    },
+    {
       keywords: ["mass", "weight", "heavy", "light", "iron", "wood"],
       replies: [
         "Ah! You speak of mass and weight. Observe closely: does a heavy iron ball truly outrun a lighter wooden sphere in their descent? Or do they glide in perfect unison when gravity alone governs them?",
@@ -86,6 +93,13 @@ const offlineSocraticReplies: Record<string, Array<{ keywords: string[]; replies
   ],
   NEWTON: [
     {
+      keywords: ["inertia", "friction", "drift", "beacon", "glide", "rover", "stop"],
+      replies: [
+        "Indeed, Cadet! My first law states that a body continues in its state of rest or uniform motion unless compelled to change by an impressed force. On Europa's frictionless ice, net force is zero during the glide. Thus, the velocity remains perfectly constant.",
+        "Observe the telemetry: when the thrusters are dark, the net force is zero. Yet, the velocity vector does not shrink, and the beacons are dropped at exact, equal spatial intervals. This proves that uniform velocity requires zero force to sustain itself!"
+      ]
+    },
+    {
       keywords: ["mass", "weight", "heavy", "light", "iron", "wood"],
       replies: [
         "Let us examine this methodically: mass represents the quantity of matter, which directly resists acceleration (inertia). Yet, gravity exerts a force directly proportional to this same mass. Do these twin proportions not perfectly cancel one another?",
@@ -122,6 +136,13 @@ const offlineSocraticReplies: Record<string, Array<{ keywords: string[]; replies
     }
   ],
   FEYNMAN: [
+    {
+      keywords: ["inertia", "friction", "drift", "beacon", "glide", "rover", "stop"],
+      replies: [
+        "Hey! This is super cool. Notice how the rover doesn't slow down a bit when the engine cuts out? That's because the ice has zero friction! The emerald velocity vector stays totally locked in, and those beacons are spaced perfectly evenly. Newton's First Law in action!",
+        "A lot of people think things need a constant force to keep moving because on Earth, friction is always sneaking in to steal our energy. But out here, there's no friction to stop it, so it just glides forever at constant speed! Isn't that wild?"
+      ]
+    },
     {
       keywords: ["mass", "weight", "heavy", "light", "iron", "wood"],
       replies: [
@@ -232,11 +253,23 @@ async function startServer() {
       const tAcc = params.forwardDuration ?? 2.0;
       const tGlide = params.glideDuration ?? 4.0;
       const tDec = params.reverseDuration ?? 2.0;
+      const predictionPresetId = simulationState?.predictionPresetId;
       const hasMisconceptionMotionNeedsForce = activeMisconceptions.includes("MISCONCEPTION_MOTION_NEEDS_FORCE");
 
       flightContext = `[ACTIVE MISSION HUDS: Europa Inertia Lands. Rover mass = ${mass} kg, Forward Thrust = ${tAcc}s, Glide/Coast = ${tGlide}s, Brake/Reverse = ${tDec}s.]\n` +
                       `You are instructing the student on Newton's First Law (Inertia) on a friction-free ice field. Net force is zero during the coasting phase, yet the rover glides at a constant velocity.\n` +
                       `The target zone is 60m.`;
+
+      if (predictionPresetId === "inertia-slow") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'inertia-slow' — that the rover will slowly decelerate and stop as soon as thrust becomes zero. They hold a core misconception that force is required to maintain motion (F proportional to v).
+COGNITIVE ALERT: Note that the actual experiment showed the rover drifted at constant velocity with zero net force. Explicitly reference their chosen hypothesis. Guide them to resolve this tension by asking them to compare their prediction with the telemetry logs, the uniform ribbon of beacons, and the persistent emerald velocity vector. Make them reflect on how the frictionless Jovian ice proves force is NOT needed to keep an object moving!]`;
+      } else if (predictionPresetId === "inertia-instant") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'inertia-instant' — that the rover will instantly drop to zero velocity as soon as the thruster is dark. They believe in instantaneous velocity change without an opposing force.
+COGNITIVE ALERT: Note that the actual experiment showed the rover drifted smoothly at a constant speed when the engine went dark. Explicitly reference their chosen hypothesis. Guide them to observe that the rover continued gliding and dropping evenly-spaced beacons. Help them understand why an instantaneous stop is physically impossible (requires infinite force) and how inertia keeps the rover moving smoothly!]`;
+      } else if (predictionPresetId === "inertia-constant") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'inertia-constant' — that the rover will drift at constant velocity because there is no friction. They have successfully predicted Newton's First Law!
+COGNITIVE ALERT: Praise their insight. Explicitly reference their hypothesis. Ask them to explain how their prediction matches the telemetry logs, the uniform beacon spacing, and the persistent emerald velocity vector during the glide phase, reinforcing their understanding of inertia.]`;
+      }
       
       if (hasMisconceptionMotionNeedsForce) {
         flightContext += `\n[COGNITIVE ALERT: The student is testing a critical misconception: they believe that constant speed requires a constant force (F = v, rather than F = m*a). Socratic-style direct them to notice how the engine goes completely DARK (F = 0) and net force is zero, yet the emerald velocity vector remains perfectly uniform and unchanging during the glide phase, dropping a uniform ribbon of beacons at identical intervals. Let them discover that objects do NOT need a force to stay in motion!]`;
@@ -245,12 +278,28 @@ async function startServer() {
       const velocity = params.velocity ?? 55;
       const angle = params.angle ?? 45;
       const gravity = params.gravity ?? 3.72;
+      const predictionPresetId = simulationState?.predictionPresetId;
 
       flightContext = simulationState 
-        ? `[ACTIVE MISSION HUDS: Projectile launch calibrated to velocity v0 = ${velocity} m/s, elevation angle = ${angle} degrees, under gravity g = ${gravity} m/s².]`
+        ? `[ACTIVE MISSION HUDS: Projectile launch calibrated to velocity v0 = ${velocity} m/s, elevation angle = ${angle} degrees, under gravity g = ${gravity} m/s².]\n` +
+          `You are instructing the student on kinematics, gravity, and projectile trajectories on Mars.`
         : "[SANDBOX CALIBRATION PENDING]";
 
-      if (isDualMassActive) {
+      if (predictionPresetId === "mass-float") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'mass-float' — that the lighter wood/lithium crate is buoyant or floats further under gravity. 
+COGNITIVE ALERT: The actual experiment showed the 10kg Wood Crate and 500kg Iron Safe flying in perfect, synchronized lockstep, landing together at the exact same moment. Explicitly reference their hypothesis. Ask leading Socratic questions to help them reflect on why mass is completely independent of the gravitational trajectory (and why buoyancy has no effect in this thin Martian atmosphere).]`;
+      } else if (predictionPresetId === "mass-heavy") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'mass-heavy' — that the heavier 500kg Iron Safe falls much faster under gravity.
+COGNITIVE ALERT: The actual experiment showed the 10kg Wood Crate and 500kg Iron Safe flying in perfect, synchronized lockstep, landing together at the exact same moment. Explicitly reference their hypothesis. Ask leading Socratic questions to help them reflect on why the 50x greater force of gravity on the safe is exactly balanced by its 50x greater resistance to acceleration (its inertia), causing them to fall with identical acceleration.]`;
+      } else if (predictionPresetId === "mass-equal") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'mass-equal' — that gravity acts completely independently of mass, so both crates trace the exact same parabola.
+COGNITIVE ALERT: Praise their brilliant insight! Explicitly reference their hypothesis. Encourage them to explain why gravity pulls harder on a heavier safe, yet it falls at the exact same rate as the light crate, reinforcing the equivalence of gravitational and inertial mass.]`;
+      } else if (predictionPresetId === "angle-45") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'angle-45' — that a 45° launch angle splits velocity components equally to yield the maximum horizontal range.
+COGNITIVE ALERT: Praise their mathematical accuracy! Explicitly reference their hypothesis. Ask them to reflect on why any angle higher or lower than 45° reduces the horizontal range under Mars gravity, helping them understand vector decomposition.]`;
+      }
+
+      if (isDualMassActive && !predictionPresetId) {
         flightContext += `\n[COGNITIVE ALERT: The student is testing a critical misconception: they predicted that mass affects projectile trajectories under gravity (believing a lighter wood crate drifts/floats further, or a heavy iron safe crashes sooner). The system has just executed a DUAL-MASS COMPARATIVE LAUNCH showing both a 500kg Iron Safe and a 10kg Wood Crate flying in perfect, synchronized lockstep and landing together at the exact same spot! Gently ask leading Socratic questions to help them reflect on why mass canceled out in the equations of motion (force is proportional to mass, but acceleration is force divided by mass, so mass cancels). Make them feel like a true discoverer!]`;
       }
     }
@@ -261,15 +310,81 @@ async function startServer() {
     if (!ai) {
       // Simulate Galileo/Newton/Feynman responses
       let mockReply = "";
-      if (mentor === "NEWTON") {
-        mockReply = "Consider, scholar: What impressed force acts vertically upon the canister? Since no force resists horizontally, its lateral speed must remain eternal. What does this reveal about your angle?";
-      } else if (mentor === "FEYNMAN") {
-        mockReply = "Hey! Think about the peak of that mountain. If you launch it too fast, it flies right past. If too slow, smash! Try finding that sweet spot where gravity curls the curve right over the peak!";
+      if (isNewtonLaws) {
+        const predictionPresetId = simulationState?.predictionPresetId;
+        if (mentor === "NEWTON") {
+          if (predictionPresetId === "inertia-slow") {
+            mockReply = "Observe, Cadet: although the engine went dark, Arion did not decay in velocity. This directly opposes your prediction of slow deceleration. What external force, then, is acting on the ice fields of Europa to slow it?";
+          } else if (predictionPresetId === "inertia-instant") {
+            mockReply = "An instantaneous halt requires an infinite opposing impulse, yet we have zero net external force. Observe that the rover continued in uniform motion. Why did its momentum persist?";
+          } else if (predictionPresetId === "inertia-constant") {
+            mockReply = "Precisely as you predicted, Cadet. Since net force is zero, velocity persists in a state of uniform motion. How does this confirm my First Law of Motion?";
+          } else {
+            mockReply = "Newton's First Law is absolute: when the net force is zero, the body preserves its state of uniform motion. Observe the uniform beacon intervals.";
+          }
+        } else if (mentor === "FEYNMAN") {
+          if (predictionPresetId === "inertia-slow") {
+            mockReply = "Hey! Notice how Arion kept cruising along at the same speed even when the engine was completely off? That means friction is zero! Your prediction of slowing down doesn't hold up when there's no friction!";
+          } else if (predictionPresetId === "inertia-instant") {
+            mockReply = "Whoa, it didn't freeze at all when the engine cut out! It just kept sliding across the ice. Things have inertia, they want to keep on doing what they're already doing! Why do you think that is?";
+          } else if (predictionPresetId === "inertia-constant") {
+            mockReply = "You nailed it! Since there's absolutely zero friction, nothing can slow it down once the thruster cuts out. It just glides at a constant speed forever. Neat, right?";
+          } else {
+            mockReply = "Friction is zero, so every push is eternal! The rover glides without slowing down. What happens when you apply the same push backwards?";
+          }
+        } else { // GALILEO or default
+          if (predictionPresetId === "inertia-slow") {
+            mockReply = "Ah, young scholar. Earthly senses deceive us into expecting everything to slow down, but here on Europa, uniform inertia persists. Why do the beacons remain perfectly evenly spaced?";
+          } else if (predictionPresetId === "inertia-instant") {
+            mockReply = "Nature does not move in sudden, discrete jumps. The rover continues its celestial sweep at an unchanging rate. Consider how this reveals the deep geometry of motion.";
+          } else if (predictionPresetId === "inertia-constant") {
+            mockReply = "Magnificent! You foresaw that without friction, speed is eternal. Observe the perfect, geometric, equal spacing of the beacon drops!";
+          } else {
+            mockReply = "The icy plains of Europa show us the pure geometric laws of motion. Observe how speed does not decay when thrust becomes zero.";
+          }
+        }
       } else {
-        if (isDualMassActive) {
-          mockReply = "Ah, young observer! Did you see how the great 500kg Iron Safe and the humble 10kg Wood Crate sailed side-by-side without a single hair's breadth of separation? Think deeply: why does the heavy drag of mass not outrun the light crate?";
+        const predictionPresetId = simulationState?.predictionPresetId;
+        if (mentor === "NEWTON") {
+          if (predictionPresetId === "mass-float") {
+            mockReply = "Observe, scholar, you predicted that the lighter wood crate would float further due to some buoyant force. Yet in this thin Martian atmosphere, both crates trace the identical parabolic course. If the gravitational force on the safe is fiftyfold, why does its acceleration remain perfectly equal? Think of the mass term in my Second Law.";
+          } else if (predictionPresetId === "mass-heavy") {
+            mockReply = "You hypothesized that the heavy Iron Safe would fall faster under gravity. But look closely at the telemetry: the 500kg safe and 10kg crate sail as twins. The force of gravity is indeed greater on the safe, but its resistance to acceleration—its inertia—is also fiftyfold! Do they not perfectly cancel?";
+          } else if (predictionPresetId === "mass-equal") {
+            mockReply = "An excellent hypothesis! You predicted gravity acts independent of mass. The telemetry confirms both crates landed at identical coordinates. How does this demonstrate that gravitational force and inertial mass are in exact proportion?";
+          } else if (predictionPresetId === "angle-45") {
+            mockReply = "Precisely. At forty-five degrees, the horizontal and vertical components of initial velocity are split symmetrically, yielding the mathematically optimal trajectory for horizontal range. How do the telemetry coordinates support this proportion?";
+          } else {
+            mockReply = "Consider, scholar: What impressed force acts vertically upon the canister? Since no force resists horizontally, its lateral speed must remain eternal. What does this reveal about your angle?";
+          }
+        } else if (mentor === "FEYNMAN") {
+          if (predictionPresetId === "mass-float") {
+            mockReply = "Hey! You thought the lighter wood crate would stay airborne longer like a balloon! But look at the screen—both crates flew side-by-side like synchronized swimmers! Gravity doesn't care about buoyancy in a vacuum or thin air. Why do you think a heavier object doesn't crash down any faster?";
+          } else if (predictionPresetId === "mass-heavy") {
+            mockReply = "Whoa! You predicted the heavy safe would drop like a rock while the wood crate lagged behind. But they landed at the exact same millisecond! Gravity pulls the safe harder, but it also takes fifty times more effort to speed up that heavy iron. It cancels out perfectly! Crazy, right?";
+          } else if (predictionPresetId === "mass-equal") {
+            mockReply = "Spot on! You predicted they'd land together, and they did! Mass has zero effect on the flight path when gravity is the only thing pulling them down. How does it feel to see nature behave exactly as you calculated?";
+          } else if (predictionPresetId === "angle-45") {
+            mockReply = "Boom! You nailed the sweet spot! 45 degrees is the magic angle that balances getting high enough to stay in the air with moving fast enough horizontally to cover ground. How does the actual telemetry match your math?";
+          } else {
+            mockReply = "Hey! Think about the peak of that mountain. If you launch it too fast, it flies right past. If too slow, smash! Try finding that sweet spot where gravity curls the curve right over the peak!";
+          }
         } else {
-          mockReply = "Ah, young traveler. Recall that uniform inertia pulls the crate forward, while gravity pulls it down. Try adjusting the launch speed to balance these twin paths.";
+          if (predictionPresetId === "mass-float") {
+            mockReply = "Ah, young observer. You suspected buoyancy would lift the lighter wood crate further. Yet, Mars has no thick atmosphere to cradle it. See how they fly together, landing in perfect lockstep? Why does the lighter weight not carry it further?";
+          } else if (predictionPresetId === "mass-heavy") {
+            mockReply = "You predicted the heavy Iron Safe would drop sooner. But look at the telemetry: the 10kg Wood Crate and 500kg Iron Safe glide side-by-side, landing together at the exact same instant! Why does the earth or Mars pull them with equal acceleration, regardless of weight?";
+          } else if (predictionPresetId === "mass-equal") {
+            mockReply = "Magnificent! You foresaw my own experiment at Pisa. Both masses, heavy and light, fall with equal swiftness. They trace the same parabola. Explain what this tells us about the nature of gravity.";
+          } else if (predictionPresetId === "angle-45") {
+            mockReply = "Superb! You predicted that a 45-degree angle divides the horizontal and vertical vectors of speed in perfect symmetry to achieve maximum distance. The parabolic telemetry logs speak for themselves!";
+          } else {
+            if (isDualMassActive) {
+              mockReply = "Ah, young observer! Did you see how the great 500kg Iron Safe and the humble 10kg Wood Crate sailed side-by-side without a single hair's breadth of separation? Think deeply: why does the heavy drag of mass not outrun the light crate?";
+            } else {
+              mockReply = "Ah, young traveler. Recall that uniform inertia pulls the crate forward, while gravity pulls it down. Try adjusting the launch speed to balance these twin paths.";
+            }
+          }
         }
       }
 
