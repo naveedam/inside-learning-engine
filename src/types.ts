@@ -51,7 +51,7 @@ export interface Mission {
     description: string;
     equationLatex?: string;
   };
-  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS" | "INERTIA_BOUNDS";
+  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS" | "INERTIA_BOUNDS" | "ENERGY_CONSERVATION" | "PARAMETER_SANDBOX";
   predictionPrompt: string;
   predictionPresets: {
     id: string;
@@ -130,6 +130,29 @@ export interface Mission {
   difficulty: "Beginner" | "Intermediate" | "Advanced";
   prerequisites: string[];
   guidedInquiries?: { label: string; text: string; }[];
+  parameterSandboxConfig?: {
+    relationshipType: "LINEAR" | "QUADRATIC" | "INVERSE" | "EXPONENTIAL" | "RATE_LIMITED";
+    primaryParamKey: string;
+    outputKey: string;
+    outputLabel: string;
+    outputUnit: string;
+    coefficients: {
+      a?: number;
+      b?: number;
+      c?: number;
+      k?: number;
+    };
+    yRange?: {
+      min: number;
+      max: number;
+    };
+    targetBand?: {
+      min: number;
+      max: number;
+      label?: string;
+    };
+    formulaDisplayLatex?: string;
+  };
 }
 
 export type MissionStepType = 

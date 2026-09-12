@@ -169,6 +169,25 @@ The `world` and `coreInteraction` blocks completely rewire the visual layout and
 *   **Aesthetic Profile:** Introspective **Gothic Indigo & Deep Violet** colors.
 *   **Dynamic Elements:** Highlights textual nodes, semantic threads, and thematic relationships.
 
+### 5. Parameter Sandbox (Cross-Disciplinary Analytical Engine)
+Introduced in Phase 2, the `PARAMETER_SANDBOX` interaction engine turns the stage into a general-purpose, 2D Cartesian function plotter and empirical parameter-fitting workbench:
+*   **Canvas Grid:** Standardized Cartesian coordinate plane ($X$ vs $Y$) with adaptive tick marks, axis labels, dynamic domain/range auto-scaling, and target-band highlights.
+*   **Relationship Support:**
+    *   `LINEAR`: $y = ax + b$
+    *   `QUADRATIC`: $y = ax^2 + bx + c$
+    *   `INVERSE`: $y = \frac{a}{x + b} + c$
+    *   `EXPONENTIAL`: $y = a e^{kx} + b$
+    *   `RATE_LIMITED`: $y = \frac{ax}{x + k}$ (Michaelis-Menten / saturation curves)
+*   **Interactive Controls & Visual Telemetry:**
+    *   Live parameter calibration with instantaneous recalculation.
+    *   Animated trial sweep with trail history points plotted against target bands.
+    *   Direct target outcome evaluation (`TARGET_ACHIEVED`, `UNDERSHOT`, `OVERSHOT`).
+*   **Social Contract #5 Pedagogical Loop:**
+    *   **Pre-experiment Hypothesis Reception:** Socratic mentor pre-responses reacting to the student's chosen hypothesis and misconception state before trial execution.
+    *   **Post-experiment Telemetry Confrontation:** Mentor remarks highlighting the empirical outcome vs the student's prediction.
+    *   **Cognitive Alignment Card:** Custom alignment display contextualizing whether data matched the prediction and prompting deep reflection on the underlying mathematical relationship.
+    *   **AI Synthesis & Offline Fallback:** Server-side `/api/mentor` context injection and persona-tailored mock responses (Galileo, Newton, Feynman).
+
 ---
 
 ## ⚡ Cognitive Feedback Loop Implementation

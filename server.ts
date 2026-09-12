@@ -246,9 +246,48 @@ async function startServer() {
     const activeMisconceptions = simulationState?.activeMisconceptions || [];
     const isDualMassActive = activeMisconceptions.includes("MISCONCEPTION_MASS_DEPENDENT_GRAVITY");
     const isNewtonLaws = simulationState?.codename === "inertia-bounds" || simulationState?.subject?.toLowerCase().includes("newton");
+    const isEnergyDepths = simulationState?.codename === "energy-depths" || simulationState?.subject?.toLowerCase().includes("work") || params.springConstant !== undefined;
+    const isParameterSandbox = simulationState?.coreInteraction === "PARAMETER_SANDBOX" || !!simulationState?.parameterSandboxConfig;
     let flightContext = "";
 
-    if (isNewtonLaws) {
+    if (isParameterSandbox) {
+      const cfg = simulationState?.parameterSandboxConfig;
+      const primaryKey = cfg?.primaryParamKey || Object.keys(params)[0] || "parameter";
+      const curParamVal = params[primaryKey] ?? 0;
+      const relType = cfg?.relationshipType || "parametric";
+      const outLabel = cfg?.outputLabel || "Output";
+      const outUnit = cfg?.outputUnit || "";
+      const predictionPresetId = simulationState?.predictionPresetId;
+
+      flightContext = `[ACTIVE MISSION HUDS: Dynamic Parameter Sandbox. Calibrated Input ${primaryKey} = ${curParamVal}, Relationship = ${relType}, Target Output = ${outLabel} (${outUnit})]\n` +
+                      `You are instructing the student on exploring mathematical modeling and empirical curve fitting.\n` +
+                      `The relationship between input and output obeys a ${relType} law.`;
+
+      if (predictionPresetId) {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student selected prediction preset: '${predictionPresetId}'.
+COGNITIVE ALERT: Compare their chosen hypothesis with the calibrated empirical curve. Guide them to observe how varying ${primaryKey} transforms ${outLabel}, and prompt them to articulate the geometric or algebraic reasons for the observed response.]`;
+      }
+    } else if (isEnergyDepths) {
+      const dropHeight = params.dropHeight ?? 50;
+      const capsuleMass = params.capsuleMass ?? 2000;
+      const springConstant = params.springConstant ?? 20000;
+      const predictionPresetId = simulationState?.predictionPresetId;
+
+      flightContext = `[ACTIVE MISSION HUDS: Mariana Trench Abyssal Elevator. Capsule mass = ${capsuleMass} kg, Drop Height = ${dropHeight}m, Spring Constant k = ${springConstant} N/m.]\n` +
+                      `You are instructing the student on the Work-Energy Theorem and Conservation of Mechanical Energy. Gravitational PE converts to Kinetic Energy, then to Elastic Spring PE.\n` +
+                      `The safe arrest zone requires spring compression between 10.0m and 12.0m without exceeding 12.0 G of deceleration.`;
+
+      if (predictionPresetId === "energy-linear") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'energy-linear' — that doubling drop height doubles spring compression in direct linear proportion.
+COGNITIVE ALERT: The actual telemetry showed that doubling height did NOT double compression (it increased by approximately the square root because U_e = 1/2 k x²). Explicitly reference their hypothesis. Help them resolve this tension by asking why compressing a spring gets harder and harder the deeper you push, requiring a quadratic energy input rather than a linear one.]`;
+      } else if (predictionPresetId === "energy-impact-max") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'energy-impact-max' — that maximum speed occurs at the very moment of initial impact with the spring (x = 0).
+COGNITIVE ALERT: The telemetry showed the capsule kept accelerating downwards even after touching the spring, reaching maximum velocity at the equilibrium point where kx = mg! Explicitly reference their hypothesis. Help them understand why downward acceleration persists as long as gravity (mg) is greater than the upward spring force (kx).]`;
+      } else if (predictionPresetId === "energy-conserved") {
+        flightContext += `\n[STUDENT PREDICTION HYPOTHESIS: The student predicted 'energy-conserved' — that total mechanical energy is conserved and peak velocity occurs at equilibrium (kx = mg).
+COGNITIVE ALERT: Praise their mastery! Explicitly reference their prediction. Guide them to articulate how the sum of gravitational, kinetic, and elastic potential remains invariant throughout the fall and arrest.]`;
+      }
+    } else if (isNewtonLaws) {
       const mass = params.mass ?? 200;
       const tAcc = params.forwardDuration ?? 2.0;
       const tGlide = params.glideDuration ?? 4.0;
@@ -310,7 +349,53 @@ COGNITIVE ALERT: Praise their mathematical accuracy! Explicitly reference their 
     if (!ai) {
       // Simulate Galileo/Newton/Feynman responses
       let mockReply = "";
-      if (isNewtonLaws) {
+      if (isParameterSandbox) {
+        const cfg = simulationState?.parameterSandboxConfig;
+        const relType = cfg?.relationshipType || "parametric";
+        const outLabel = cfg?.outputLabel || "output";
+        const outUnit = cfg?.outputUnit || "";
+
+        if (mentor === "NEWTON") {
+          mockReply = `Observe how the data points trace the ${relType.toLowerCase()} locus. As the primary parameter is varied, the resultant ${outLabel} (${outUnit}) obeys an exact mathematical law. How does this proportion explain the system's equilibrium?`;
+        } else if (mentor === "FEYNMAN") {
+          mockReply = `Check out how that curve bends! When you slide the input, the ${outLabel} changes following a ${relType.toLowerCase()} relationship! Think of what's physically happening under the hood that makes it curve that way instead of a straight line!`;
+        } else { // Galileo or default
+          mockReply = `Consider the geometric symmetry displayed upon the grid. Nature speaks in the language of mathematics, and here it manifests as a ${relType.toLowerCase()} proportion. What does the rate of ascent or descent reveal to you?`;
+        }
+      } else if (isEnergyDepths) {
+        const predictionPresetId = simulationState?.predictionPresetId;
+        if (mentor === "NEWTON") {
+          if (predictionPresetId === "energy-linear") {
+            mockReply = "Cadet, observe the recorded spring compression. Doubling the drop height did not yield double the displacement. Why? Because the work required to compress an elastic spring is proportional to the square of its compression (W = 1/2 k x²). Does this not overturn your linear hypothesis?";
+          } else if (predictionPresetId === "energy-impact-max") {
+            mockReply = "Look closely at the acceleration vectors: at initial impact, the spring compression is zero, so the upward spring force is zero. Gravity continues to accelerate the capsule downwards until the spring force matches the weight (kx = mg). Why must maximum speed occur at this equilibrium point?";
+          } else if (predictionPresetId === "energy-conserved") {
+            mockReply = "A flawless deduction! The sum of gravitational potential, kinetic energy, and spring potential remained invariant at every point of the descent. How does this demonstrate the Work-Energy Theorem?";
+          } else {
+            mockReply = "By the Work-Energy Theorem, the net work performed by gravity and the spring buffer exactly equals the change in kinetic energy: W_net = ΔK. Observe how energy transfers between potential and kinetic states.";
+          }
+        } else if (mentor === "FEYNMAN") {
+          if (predictionPresetId === "energy-linear") {
+            mockReply = "Hey! Look at that squish distance! You thought twice the height would mean twice the compression, but springs don't work like that! The more you push 'em, the harder they fight back (1/2 k x²)! How does that change the way you see spring energy?";
+          } else if (predictionPresetId === "energy-impact-max") {
+            mockReply = "Check out the speed gauge right after it hit the spring! It was still accelerating downwards! The spring hasn't pushed back hard enough yet at the start. It only hits top speed when the upward spring push equals the downward pull of gravity!";
+          } else if (predictionPresetId === "energy-conserved") {
+            mockReply = "Boom! You nailed it! Energy is 100% conserved—like water pouring between three buckets (height, speed, and spring coils). And top speed was right at that equilibrium line! Pretty neat, right?";
+          } else {
+            mockReply = "Energy can't be created or destroyed, it just changes costumes! Watch that gravitational potential energy turn into kinetic speed, and then into spring squish!";
+          }
+        } else { // GALILEO or default
+          if (predictionPresetId === "energy-linear") {
+            mockReply = "Nature's proportions are rarely so plain. The resistance of the coiled metal increases with each measure of depth. Doubling the height does not double the yield of the spring. Reflect on the quadratic law governing elastic bodies.";
+          } else if (predictionPresetId === "energy-impact-max") {
+            mockReply = "Observe the velocity vector as the capsule touches the buffer. Downward motion continues to accelerate until the coils exert an opposing force equal to the carriage's weight. Why does speed reach its peak at this balance of forces?";
+          } else if (predictionPresetId === "energy-conserved") {
+            mockReply = "Magnificent! You foresaw the eternal constancy of mechanical power. The descent of the weight is converted wholly into the tension of the coiled spring. Formulate your reflection on this divine harmony.";
+          } else {
+            mockReply = "Consider the balance of nature: the height fallen represents stored impetus, which yields its force unto the spring until motion ceases.";
+          }
+        }
+      } else if (isNewtonLaws) {
         const predictionPresetId = simulationState?.predictionPresetId;
         if (mentor === "NEWTON") {
           if (predictionPresetId === "inertia-slow") {

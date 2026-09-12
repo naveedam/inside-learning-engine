@@ -163,6 +163,8 @@ export default function MissionActiveView() {
           simulationState: {
             subject: mission.subject,
             codename: mission.codename,
+            coreInteraction: mission.coreInteraction,
+            parameterSandboxConfig: mission.parameterSandboxConfig,
             params: simParameters,
             activeMisconceptions,
             cognitiveState: cognitiveLoopState,
@@ -684,6 +686,294 @@ export default function MissionActiveView() {
       ctx.fillText(`NET FORCE : ${activeEngine === "none" ? "0 N (ENGINE DARK)" : activeEngine === "forward" ? "1000 N (FORWARD THRUST)" : "-1000 N (BRAKING THRUST)"}`, 16, 36);
       ctx.fillText(`VELOCITY  : ${v.toFixed(1)} m/s`, 16, 45);
       ctx.fillText(`POSITION  : ${posX.toFixed(1)} m  /  60.0 m TARGET`, 16, 54);
+    } else if (mission.coreInteraction === "ENERGY_CONSERVATION") {
+      // Expedition 03: Mariana Trench Orbital Elevator Spring Buffer (Work-Energy Theorem)
+      const h = simParameters["dropHeight"] || 50;
+      const m = simParameters["capsuleMass"] || 2000;
+      const k = simParameters["springConstant"] || 20000;
+      const g = 9.8;
+
+      // Closed-form analytical mechanics for vertical drop into spring
+      const xMax = (m * g + Math.sqrt((m * g) * (m * g) + 2 * k * m * g * h)) / k;
+      const xEq = (m * g) / k;
+      const vImpact = Math.sqrt(2 * g * h);
+      const omega = Math.sqrt(k / m);
+      const tFall = Math.sqrt((2 * h) / g);
+      const tCompress = omega > 0 ? (Math.PI - Math.atan(vImpact / (omega * xEq))) / omega : 1.0;
+      const tTotal = tFall + tCompress;
+
+      let t = 0;
+      if (simProgress >= 0) {
+        t = tTotal * simProgress;
+      } else if (launches.length > 0) {
+        t = tTotal; // Show final arrested state
+      } else {
+        t = 0; // Ready at top
+      }
+
+      let yFall = 0;
+      let x = 0;
+      let v = 0;
+      let stage: "FREEFALL" | "COMPRESSING" | "ARRESTED" = "FREEFALL";
+
+      if (t <= tFall) {
+        yFall = 0.5 * g * t * t;
+        v = g * t;
+        x = 0;
+        stage = "FREEFALL";
+      } else {
+        const tPrime = t - tFall;
+        x = xEq - xEq * Math.cos(omega * tPrime) + (vImpact / omega) * Math.sin(omega * tPrime);
+        x = Math.max(0, Math.min(xMax, x));
+        const rawV = xEq * omega * Math.sin(omega * tPrime) + vImpact * Math.cos(omega * tPrime);
+        v = Math.max(0, rawV);
+        yFall = h;
+        stage = v <= 0.1 ? "ARRESTED" : "COMPRESSING";
+      }
+
+      // Energy accounting (Total = m*g*(h + xMax))
+      const eTotal = m * g * (h + xMax);
+      const uG = Math.max(0, m * g * (h + xMax - (yFall + x)));
+      const kE = 0.5 * m * v * v;
+      const uE = 0.5 * k * x * x;
+
+      const pctUg = Math.min(100, Math.max(0, (uG / eTotal) * 100));
+      const pctKe = Math.min(100, Math.max(0, (kE / eTotal) * 100));
+      const pctUe = Math.min(100, Math.max(0, (uE / eTotal) * 100));
+
+      const currentG = x > 0 ? (k * x) / (m * g) : 0;
+      const peakG = (k * xMax) / (m * g);
+
+      // --- CANVAS DRAWING ---
+      // Left Shaft: x = 12 to 220, bedrock at y = height - 16
+      const shaftL = 16;
+      const shaftR = 215;
+      const shaftW = shaftR - shaftL;
+      const bedrockY = height - 16;
+      const springTopRestY = bedrockY - 65; // 65px rest spring length
+
+      // Abyssal trench gradient background inside shaft
+      const shaftGrad = ctx.createLinearGradient(shaftL, 10, shaftR, bedrockY);
+      shaftGrad.addColorStop(0, "#030c1e");
+      shaftGrad.addColorStop(1, "#020712");
+      ctx.fillStyle = shaftGrad;
+      ctx.fillRect(shaftL, 10, shaftW, bedrockY - 10);
+
+      // Floating bioluminescent abyssal particles
+      ctx.fillStyle = "rgba(6, 182, 212, 0.4)";
+      for (let i = 0; i < 7; i++) {
+        const px = shaftL + 15 + ((i * 37 + (animationFrame % 200) * 0.2) % (shaftW - 30));
+        const py = 20 + ((i * 43) % (bedrockY - 50));
+        ctx.beginPath();
+        ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Vertical guide rails
+      ctx.strokeStyle = "rgba(71, 85, 105, 0.6)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(shaftL + 12, 10);
+      ctx.lineTo(shaftL + 12, bedrockY);
+      ctx.moveTo(shaftR - 12, 10);
+      ctx.lineTo(shaftR - 12, bedrockY);
+      ctx.stroke();
+
+      // Depth markers
+      ctx.fillStyle = "rgba(148, 163, 184, 0.4)";
+      ctx.font = "6px monospace";
+      ctx.fillText("-10,950m", shaftL + 16, 25);
+      ctx.fillText("-10,975m", shaftL + 16, (bedrockY + 10) / 2);
+      ctx.fillText("-11,000m (BEDROCK)", shaftL + 16, bedrockY - 4);
+
+      // Target Safe Buffer Zone (10.0m - 12.0m)
+      const targetZoneTop = springTopRestY + (10.0 / 15.0) * 45;
+      const targetZoneH = (2.0 / 15.0) * 45;
+      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+      ctx.fillRect(shaftL + 14, targetZoneTop, shaftW - 28, targetZoneH);
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.6)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 2]);
+      ctx.strokeRect(shaftL + 14, targetZoneTop, shaftW - 28, targetZoneH);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#10b981";
+      ctx.font = "bold 7px monospace";
+      ctx.fillText("TARGET ZONE (10-12m)", shaftL + 24, targetZoneTop + targetZoneH - 2);
+
+      // Equilibrium Line: kx = mg (Peak Speed Marker)
+      const eqY = springTopRestY + (xEq / 15.0) * 45;
+      if (eqY < bedrockY - 10) {
+        ctx.strokeStyle = "rgba(245, 158, 11, 0.7)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.moveTo(shaftL + 14, eqY);
+        ctx.lineTo(shaftR - 14, eqY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "6px monospace";
+        ctx.fillText("⚖️ EQUILIBRIUM: kx=mg (PEAK SPEED)", shaftL + 24, eqY - 2);
+      }
+
+      // Dynamic Spring Coils
+      const compressionPx = (x / 15.0) * 45;
+      const currentPlateY = springTopRestY + compressionPx;
+      const springHeight = bedrockY - currentPlateY;
+
+      // Bedrock plate
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(shaftL + 15, bedrockY - 4, shaftW - 30, 8);
+
+      // Coils
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      const numCoils = 7;
+      const coilStep = springHeight / numCoils;
+      const coilMidX = (shaftL + shaftR) / 2;
+      const coilW = 26;
+
+      ctx.moveTo(coilMidX, bedrockY - 4);
+      for (let i = 0; i < numCoils; i++) {
+        const segY = bedrockY - 4 - (i + 0.5) * coilStep;
+        const sign = i % 2 === 0 ? 1 : -1;
+        ctx.lineTo(coilMidX + sign * coilW, segY);
+      }
+      ctx.lineTo(coilMidX, currentPlateY);
+      ctx.stroke();
+
+      // Buffer impact head plate
+      ctx.fillStyle = "#0284c7";
+      ctx.fillRect(shaftL + 25, currentPlateY - 4, shaftW - 50, 6);
+      ctx.strokeStyle = "#e0f2fe";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(shaftL + 25, currentPlateY - 4, shaftW - 50, 6);
+
+      // Capsule Position:
+      // Freefall travels from top (y = 25) to springTopRestY - 20 (capsule height = 24)
+      const freefallPx = (yFall / h) * (springTopRestY - 45);
+      const capsuleY = t <= tFall ? 25 + freefallPx : currentPlateY - 24;
+      const capsuleMidX = (shaftL + shaftR) / 2;
+
+      // Capsule Hull
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(capsuleMidX - 22, capsuleY, 44, 24);
+      ctx.strokeStyle = "#0ea5e9";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(capsuleMidX - 22, capsuleY, 44, 24);
+
+      // Viewport window
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(capsuleMidX, capsuleY + 10, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Thruster trail / shockwave if falling
+      if (v > 0) {
+        // Emerald velocity vector arrow pointing downwards
+        const arrowLen = Math.min(35, v * 0.8);
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(capsuleMidX, capsuleY + 24);
+        ctx.lineTo(capsuleMidX, capsuleY + 24 + arrowLen);
+        ctx.stroke();
+
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath();
+        ctx.moveTo(capsuleMidX, capsuleY + 24 + arrowLen);
+        ctx.lineTo(capsuleMidX - 4, capsuleY + 24 + arrowLen - 6);
+        ctx.lineTo(capsuleMidX + 4, capsuleY + 24 + arrowLen - 6);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#10b981";
+        ctx.font = "bold 7px monospace";
+        ctx.fillText(`v=${v.toFixed(1)}m/s`, capsuleMidX + 8, capsuleY + 22 + arrowLen);
+      }
+
+      // Status text above capsule
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 7px monospace";
+      ctx.fillText(`CAPSULE (${m}kg)`, capsuleMidX - 24, capsuleY - 4);
+
+      // --- RIGHT SIDE HUD: LIVE REAL-TIME WORK-ENERGY BARS ---
+      const hudX = 230;
+      const hudW = width - hudX - 10;
+      const hudH = 126;
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      ctx.fillRect(hudX, 10, hudW, hudH);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hudX, 10, hudW, hudH);
+
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText("⚡ WORK-ENERGY THEOREM (MARIANA SHAFT)", hudX + 8, 22);
+
+      const barX = hudX + 8;
+      const barW = hudW - 16;
+      const barH = 10;
+
+      // 1. Gravitational Potential Energy Bar
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "7px monospace";
+      ctx.fillText(`GRAVITATIONAL PE (Ug = mgh): ${pctUg.toFixed(1)}%`, barX, 36);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+      ctx.fillRect(barX, 40, barW, barH);
+      ctx.fillStyle = "#f59e0b";
+      ctx.fillRect(barX, 40, (barW * pctUg) / 100, barH);
+
+      // 2. Kinetic Energy Bar
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "7px monospace";
+      ctx.fillText(`KINETIC ENERGY (K = ½mv²): ${pctKe.toFixed(1)}%`, barX, 60);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+      ctx.fillRect(barX, 64, barW, barH);
+      ctx.fillStyle = "#06b6d4";
+      ctx.fillRect(barX, 64, (barW * pctKe) / 100, barH);
+
+      // 3. Elastic Potential Energy Bar
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "7px monospace";
+      ctx.fillText(`SPRING ELASTIC PE (Ue = ½kx²): ${pctUe.toFixed(1)}%`, barX, 84);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+      ctx.fillRect(barX, 88, barW, barH);
+      ctx.fillStyle = "#10b981";
+      ctx.fillRect(barX, 88, (barW * pctUe) / 100, barH);
+
+      // 4. Conservation of Total Mechanical Energy
+      const totalPct = Math.min(100, pctUg + pctKe + pctUe);
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 7px monospace";
+      ctx.fillText(`TOTAL MECHANICAL ENERGY: ${totalPct.toFixed(0)}% [CONSERVED]`, barX, 108);
+      ctx.fillStyle = "rgba(56, 189, 248, 0.2)";
+      ctx.fillRect(barX, 112, barW, 4);
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(barX, 112, (barW * totalPct) / 100, 4);
+
+      // Lower Telemetry Readouts HUD
+      const teleY = 144;
+      const teleH = height - teleY - 10;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      ctx.fillRect(hudX, teleY, hudW, teleH);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.strokeRect(hudX, teleY, hudW, teleH);
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText("📊 ARREST DYNAMICS TELEMETRY", hudX + 8, teleY + 14);
+
+      ctx.font = "7px monospace";
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText(`STATE       : ${stage}`, hudX + 8, teleY + 28);
+      ctx.fillText(`COMPRESSION : x = ${x.toFixed(1)} m  (Max: ${xMax.toFixed(1)} m)`, hudX + 8, teleY + 40);
+      ctx.fillText(`EQUILIBRIUM : x_eq = ${xEq.toFixed(1)} m  (kx = mg)`, hudX + 8, teleY + 52);
+      ctx.fillText(`DECEL FORCE : ${currentG.toFixed(1)} G  (Peak: ${peakG.toFixed(1)} G)`, hudX + 8, teleY + 64);
+      ctx.fillText(`TARGET ZONE : 10.0m - 12.0m [SAFETY THRESHOLD]`, hudX + 8, teleY + 76);
+      ctx.fillText(`TOTAL WORK  : W_net = ΔK = 0 J at full stop`, hudX + 8, teleY + 88);
     } else if (mission.coreInteraction === "TITRATION_BALANCE") {
       // Chemistry Titration setup drawing
       const baseMolar = simParameters["baseMolarity"] || 0.1;
@@ -858,6 +1148,272 @@ export default function MissionActiveView() {
       ctx.fillStyle = tragedy > 2000 ? "#c084fc" : "#94a3b8";
       ctx.font = "bold 9px monospace";
       ctx.fillText(`TRAGIC INDEX: ${Math.min(100, tragedy / 30).toFixed(0)}%`, 30, 30);
+    } else if (mission.coreInteraction === "PARAMETER_SANDBOX") {
+      // 2D Mathematical Axis Plot Engine
+      const cfg = mission.parameterSandboxConfig;
+      const primaryKey = cfg?.primaryParamKey || mission.experimentFlow.parameters[0]?.name || "x";
+      const primaryParam = mission.experimentFlow.parameters.find((p) => p.name === primaryKey) || mission.experimentFlow.parameters[0];
+      const xMin = primaryParam?.min ?? 0;
+      const xMax = primaryParam?.max ?? 100;
+      const curX = simParameters[primaryKey] ?? primaryParam?.defaultValue ?? 0;
+
+      // Theme-based accent color mapping based on world.visualAtmosphere
+      const atmo = (mission.world.visualAtmosphere || "").toLowerCase();
+      let accentColor = "#22d3ee"; // default cyan
+      let accentRgb = "34, 211, 238";
+      if (atmo.includes("amber") || atmo.includes("gold") || atmo.includes("sunset") || atmo.includes("crimson")) {
+        accentColor = "#f59e0b";
+        accentRgb = "245, 158, 11";
+      } else if (atmo.includes("violet") || atmo.includes("indigo") || atmo.includes("gothic") || atmo.includes("purple")) {
+        accentColor = "#a855f7";
+        accentRgb = "168, 85, 247";
+      } else if (atmo.includes("emerald") || atmo.includes("green") || atmo.includes("neon")) {
+        accentColor = "#10b981";
+        accentRgb = "16, 185, 129";
+      } else if (atmo.includes("blue") || atmo.includes("abyssal") || atmo.includes("ocean")) {
+        accentColor = "#38bdf8";
+        accentRgb = "56, 189, 248";
+      }
+
+      // Mathematical formula evaluator for a given x
+      const evaluateFormula = (xVal: number): number => {
+        if (!cfg) return xVal;
+        const { relationshipType, coefficients = {} } = cfg;
+        const a = coefficients.a ?? 1;
+        const b = coefficients.b ?? 0;
+        const c = coefficients.c ?? 0;
+        const kCoeff = coefficients.k ?? 1;
+
+        switch (relationshipType) {
+          case "LINEAR":
+            return a * xVal + b;
+          case "QUADRATIC":
+            return a * xVal * xVal + b * xVal + c;
+          case "INVERSE":
+            return xVal !== 0 ? a / (xVal + b) + c : 0;
+          case "EXPONENTIAL":
+            return a * Math.exp(kCoeff * xVal) + b;
+          case "RATE_LIMITED":
+            return (a * xVal) / (xVal + (kCoeff || 1));
+          default:
+            return xVal;
+        }
+      };
+
+      // Determine graph bounding box with margins
+      const padLeft = 70;
+      const padRight = 35;
+      const padTop = 45;
+      const padBottom = 50;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      // Determine y-range (either from cfg or computed from sample points)
+      let yMin = cfg?.yRange?.min ?? 0;
+      let yMax = cfg?.yRange?.max ?? 100;
+      if (!cfg?.yRange) {
+        let sampleMin = Infinity;
+        let sampleMax = -Infinity;
+        const steps = 40;
+        for (let i = 0; i <= steps; i++) {
+          const sx = xMin + ((xMax - xMin) * i) / steps;
+          const sy = evaluateFormula(sx);
+          if (sy < sampleMin) sampleMin = sy;
+          if (sy > sampleMax) sampleMax = sy;
+        }
+        yMin = Math.min(0, sampleMin);
+        yMax = sampleMax > yMin ? sampleMax * 1.15 : yMin + 10;
+      }
+      if (yMax <= yMin) yMax = yMin + 1;
+
+      const toPlotX = (xVal: number) => padLeft + ((xVal - xMin) / (xMax - xMin)) * plotW;
+      const toPlotY = (yVal: number) => padTop + plotH - ((yVal - yMin) / (yMax - yMin)) * plotH;
+
+      // Draw plot canvas background & inner grid lines
+      ctx.fillStyle = "rgba(10, 15, 29, 0.6)";
+      ctx.fillRect(padLeft, padTop, plotW, plotH);
+
+      // Target calibration band if configured
+      if (cfg?.targetBand) {
+        const tbY1 = Math.max(padTop, Math.min(padTop + plotH, toPlotY(cfg.targetBand.max)));
+        const tbY2 = Math.max(padTop, Math.min(padTop + plotH, toPlotY(cfg.targetBand.min)));
+        const bandTop = Math.min(tbY1, tbY2);
+        const bandHeight = Math.abs(tbY2 - tbY1);
+
+        ctx.fillStyle = "rgba(16, 185, 129, 0.08)";
+        ctx.fillRect(padLeft, bandTop, plotW, bandHeight);
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, bandTop);
+        ctx.lineTo(padLeft + plotW, bandTop);
+        ctx.moveTo(padLeft, bandTop + bandHeight);
+        ctx.lineTo(padLeft + plotW, bandTop + bandHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#34d399";
+        ctx.font = "bold 8px monospace";
+        ctx.fillText(`TARGET ZONE [${cfg.targetBand.min} - ${cfg.targetBand.max} ${cfg.outputUnit}]`, padLeft + 8, bandTop + 11);
+      }
+
+      // Grid lines
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+      ctx.lineWidth = 1;
+      const xGridTicks = 5;
+      for (let i = 0; i <= xGridTicks; i++) {
+        const gx = padLeft + (plotW * i) / xGridTicks;
+        const tickVal = xMin + ((xMax - xMin) * i) / xGridTicks;
+        ctx.beginPath();
+        ctx.moveTo(gx, padTop);
+        ctx.lineTo(gx, padTop + plotH);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(148, 163, 184, 0.6)";
+        ctx.font = "8px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`${tickVal.toFixed(0)}`, gx, padTop + plotH + 14);
+      }
+
+      const yGridTicks = 5;
+      for (let i = 0; i <= yGridTicks; i++) {
+        const gy = padTop + (plotH * i) / yGridTicks;
+        const tickVal = yMax - ((yMax - yMin) * i) / yGridTicks;
+        ctx.beginPath();
+        ctx.moveTo(padLeft, gy);
+        ctx.lineTo(padLeft + plotW, gy);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(148, 163, 184, 0.6)";
+        ctx.font = "8px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(`${tickVal.toFixed(1)}`, padLeft - 8, gy + 3);
+      }
+      ctx.textAlign = "left";
+
+      // 2D Axes lines
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, padTop);
+      ctx.lineTo(padLeft, padTop + plotH);
+      ctx.lineTo(padLeft + plotW, padTop + plotH);
+      ctx.stroke();
+
+      // Axis Labels
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "bold 9px monospace";
+      const xLabel = `${primaryParam?.label || primaryKey} (${primaryParam?.unit || ""})`;
+      ctx.fillText(xLabel, padLeft + plotW / 2 - 30, padTop + plotH + 30);
+
+      ctx.save();
+      ctx.translate(18, padTop + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      const yLabel = `${cfg?.outputLabel || "Output Quantity"} (${cfg?.outputUnit || ""})`;
+      ctx.fillText(yLabel, -ctx.measureText(yLabel).width / 2, 0);
+      ctx.restore();
+
+      // Render past trial points if present
+      launches.forEach((l, idx) => {
+        const lx = l.params[primaryKey];
+        if (lx !== undefined) {
+          const ly = l.outcomeValue;
+          const px = toPlotX(lx);
+          const py = toPlotY(ly);
+          if (px >= padLeft && px <= padLeft + plotW && py >= padTop && py <= padTop + plotH) {
+            ctx.fillStyle = l.status === "TARGET_ACHIEVED" ? "rgba(52, 211, 153, 0.7)" : "rgba(148, 163, 184, 0.5)";
+            ctx.beginPath();
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "rgba(148, 163, 184, 0.4)";
+            ctx.font = "7px monospace";
+            ctx.fillText(`T${idx + 1}`, px + 5, py - 3);
+          }
+        }
+      });
+
+      // Render the continuous function curve
+      const samples = 120;
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i <= samples; i++) {
+        const sx = xMin + ((xMax - xMin) * i) / samples;
+        const sy = evaluateFormula(sx);
+        const px = toPlotX(sx);
+        const py = toPlotY(sy);
+        const clampedY = Math.max(padTop - 5, Math.min(padTop + plotH + 5, py));
+        if (!started) {
+          ctx.moveTo(px, clampedY);
+          started = true;
+        } else {
+          ctx.lineTo(px, clampedY);
+        }
+      }
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = `rgba(${accentRgb}, 0.5)`;
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Current operating point on curve
+      const curY = evaluateFormula(curX);
+      const curPx = toPlotX(curX);
+      const curPy = Math.max(padTop, Math.min(padTop + plotH, toPlotY(curY)));
+
+      // Crosshair lines to axes
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = `rgba(${accentRgb}, 0.5)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(curPx, padTop + plotH);
+      ctx.lineTo(curPx, curPy);
+      ctx.lineTo(padLeft, curPy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Operating point marker with pulse
+      const pulse = simProgress >= 0 ? Math.sin(simProgress * Math.PI * 4) * 3 : 0;
+      ctx.fillStyle = accentColor;
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(curPx, curPy, 5 + Math.max(0, pulse), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(curPx, curPy, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Live readout badge above operating point
+      const badgeText = `${curX.toFixed(1)}${primaryParam?.unit || ""} ➔ ${curY.toFixed(2)} ${cfg?.outputUnit || ""}`;
+      ctx.font = "bold 9px monospace";
+      const textWidth = ctx.measureText(badgeText).width;
+      const badgeX = Math.max(padLeft + 5, Math.min(padLeft + plotW - textWidth - 12, curPx - textWidth / 2 - 5));
+      const badgeY = Math.max(padTop + 14, curPy - 12);
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      ctx.strokeStyle = `rgba(${accentRgb}, 0.6)`;
+      ctx.lineWidth = 1;
+      ctx.fillRect(badgeX, badgeY - 10, textWidth + 10, 15);
+      ctx.strokeRect(badgeX, badgeY - 10, textWidth + 10, 15);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(badgeText, badgeX + 5, badgeY + 1);
+
+      // Header telemetry bar inside plot
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.fillRect(padLeft + 8, padTop + 8, 230, 22);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.strokeRect(padLeft + 8, padTop + 8, 230, 22);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = "bold 9px monospace";
+      const relLabel = cfg?.relationshipType || "PARAMETRIC";
+      ctx.fillText(`FUNCTION: ${relLabel}`, padLeft + 14, padTop + 22);
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillText(`| OUT: ${curY.toFixed(2)} ${cfg?.outputUnit || ""}`, padLeft + 135, padTop + 22);
     }
   }, [simParameters, simProgress, animationFrame, activeMissionId, mission, selectedPresetId, activeMisconceptions, launches]);
 
@@ -1077,6 +1633,148 @@ export default function MissionActiveView() {
             mentorText = "Fascinating! Notice how the speed does not diminish once the engine shuts off. Without friction, motion has no natural end. To stop it, we must match the original forward impulse precisely.";
           } else {
             mentorText = `The state of rest is achieved, but the position is incorrect. To change the resting coordinates on this frictionless canvas, we must adjust the duration of unpowered inertial drift.`;
+          }
+        }
+
+        if (mentorText) {
+          setChatLog((prev) => [...prev, { sender: "MENTOR", text: mentorText }]);
+        }
+      }, 1000);
+    } else if (mission.coreInteraction === "ENERGY_CONSERVATION") {
+      const h = simParameters["dropHeight"] || 50;
+      const m = simParameters["capsuleMass"] || 2000;
+      const k = simParameters["springConstant"] || 20000;
+      const g = 9.8;
+
+      const xMax = (m * g + Math.sqrt((m * g) * (m * g) + 2 * k * m * g * h)) / k;
+      const peakG = (k * xMax) / (m * g);
+      val = Number(xMax.toFixed(1));
+      label = `${val}m Compression (${peakG.toFixed(1)}G Decel)`;
+
+      if (val >= 10.0 && val <= 12.0) {
+        status = "SECURED";
+        isSuccess = true;
+      } else if (val > 12.0) {
+        status = "CRASHED";
+        isSuccess = false;
+        label = `Bottomed Out at ${val}m (Bedrock Breach!)`;
+      } else {
+        status = "UNDERSHOT";
+        isSuccess = false;
+        label = `Spring Too Stiff! Stopped at ${val}m (${peakG.toFixed(1)}G)`;
+      }
+
+      // Spontaneous mentor response for Energy Depths
+      setTimeout(() => {
+        let mentorText = "";
+        if (selectedMentor === "NEWTON") {
+          if (status === "SECURED") {
+            mentorText = `Superb calibration! The Work-Energy Theorem is demonstrated with mathematical precision ($mg(h + x) = \\frac{1}{2}kx^2$). The capsule was safely arrested at ${val}m compression, and peak deceleration remained within the safe ${peakG.toFixed(1)}G threshold.`;
+          } else if (status === "CRASHED") {
+            mentorText = `Disaster in the Mariana shaft! The spring stiffness was too low ($k = ${k}\\text{ N/m}$), allowing the capsule to compress past the 12.0m buffer limit to ${val}m and strike bedrock. We must increase the spring constant to arrest the descent sooner.`;
+          } else {
+            mentorText = `The spring is excessively rigid! The capsule compressed to only ${val}m, but generated a severe deceleration force of ${peakG.toFixed(1)}G upon impact. We must decrease spring stiffness ($k$) or lower the drop height to protect the passengers.`;
+          }
+        } else if (selectedMentor === "FEYNMAN") {
+          if (status === "SECURED") {
+            mentorText = `Bullseye! That was a gorgeous energy transfer! Every single joule of gravitational energy from that ${h}m drop was cleanly soaked up by the spring coils, stopping right in the sweet spot at ${val}m! Look at those energy bars lock into place!`;
+          } else if (status === "CRASHED") {
+            mentorText = `Ouch! The spring was way too squishy! It compressed all the way down to ${val}m and bottomed out right against the bedrock! Dial up the spring stiffness so the coils push back harder!`;
+          } else {
+            mentorText = `Whoa, way too stiff! It stopped at ${val}m, but that impact slammed with ${peakG.toFixed(1)} Gs of deceleration! Dial down the spring constant so the capsule gets a softer, smoother landing inside the 10-12m zone!`;
+          }
+        } else { // Galileo Galilei
+          if (status === "SECURED") {
+            mentorText = `A triumph of natural equilibrium! The descent car has yielded to the restorative power of the electromagnetic coils, coming to rest at ${val}m. You have demonstrated the eternal balance of motion and resistance.`;
+          } else if (status === "CRASHED") {
+            mentorText = `The coils yielded too readily to the downward momentum of the capsule, compressing to ${val}m and striking the floor of the trench. We must stiffen the spring's elasticity to preserve the vessel.`;
+          } else {
+            mentorText = `The restorative force acted with violent abruptness, stopping the fall at ${val}m with an extreme force of ${peakG.toFixed(1)} G. Let us relax the coils to allow a longer, gentler arrest within the 10.0m - 12.0m zone.`;
+          }
+        }
+
+        if (mentorText) {
+          setChatLog((prev) => [...prev, { sender: "MENTOR", text: mentorText }]);
+        }
+      }, 1000);
+    } else if (mission.coreInteraction === "PARAMETER_SANDBOX") {
+      const cfg = mission.parameterSandboxConfig;
+      const primaryKey = cfg?.primaryParamKey || mission.experimentFlow.parameters[0]?.name || "x";
+      const primaryParam = mission.experimentFlow.parameters.find((p) => p.name === primaryKey) || mission.experimentFlow.parameters[0];
+      const curX = simParameters[primaryKey] ?? primaryParam?.defaultValue ?? 0;
+
+      // Calculate output using configured relationship
+      const evaluateFormula = (xVal: number): number => {
+        if (!cfg) return xVal;
+        const { relationshipType, coefficients = {} } = cfg;
+        const a = coefficients.a ?? 1;
+        const b = coefficients.b ?? 0;
+        const c = coefficients.c ?? 0;
+        const kCoeff = coefficients.k ?? 1;
+
+        switch (relationshipType) {
+          case "LINEAR":
+            return a * xVal + b;
+          case "QUADRATIC":
+            return a * xVal * xVal + b * xVal + c;
+          case "INVERSE":
+            return xVal !== 0 ? a / (xVal + b) + c : 0;
+          case "EXPONENTIAL":
+            return a * Math.exp(kCoeff * xVal) + b;
+          case "RATE_LIMITED":
+            return (a * xVal) / (xVal + (kCoeff || 1));
+          default:
+            return xVal;
+        }
+      };
+
+      const outY = evaluateFormula(curX);
+      val = Number(outY.toFixed(2));
+      label = `${curX.toFixed(1)}${primaryParam?.unit || ""} ➔ ${val} ${cfg?.outputUnit || ""}`;
+
+      // Check success against targetBand or targets
+      const targetMin = cfg?.targetBand?.min ?? mission.experimentFlow.targets?.min ?? 0;
+      const targetMax = cfg?.targetBand?.max ?? mission.experimentFlow.targets?.max ?? 100;
+
+      if (val >= targetMin && val <= targetMax) {
+        status = "SECURED";
+        isSuccess = true;
+      } else if (val < targetMin) {
+        status = "UNDERSHOT";
+        isSuccess = false;
+      } else {
+        status = "OVERSHOT";
+        isSuccess = false;
+      }
+
+      setTimeout(() => {
+        let mentorText = "";
+        const outName = cfg?.outputLabel || "Output";
+        const unit = cfg?.outputUnit || "";
+
+        if (selectedMentor === "NEWTON") {
+          if (status === "SECURED") {
+            mentorText = `Mathematical harmony achieved! With ${primaryParam?.label || primaryKey} at ${curX.toFixed(1)}, the computed ${outName} is ${val} ${unit}, falling precisely within the target boundary [${targetMin} - ${targetMax}].`;
+          } else if (status === "UNDERSHOT") {
+            mentorText = `The current quantity yields ${val} ${unit}, which falls below the target threshold of ${targetMin} ${unit}. Analyze the rate of change and adjust ${primaryParam?.label || primaryKey} accordingly.`;
+          } else {
+            mentorText = `The magnitude of ${val} ${unit} exceeds our target boundary [${targetMin} - ${targetMax}]. Re-evaluate the underlying proportion and temper the primary input.`;
+          }
+        } else if (selectedMentor === "FEYNMAN") {
+          if (status === "SECURED") {
+            mentorText = `Boom! Spot on! With ${primaryParam?.label || primaryKey} dialed to ${curX.toFixed(1)}, we hit ${val} ${unit} right in the sweet spot! Look at how that curve predicts the real behavior!`;
+          } else if (status === "UNDERSHOT") {
+            mentorText = `Almost there, but we landed short at ${val} ${unit} (target is ${targetMin} - ${targetMax} ${unit}). Look at which way the curve bends and give it another tweak!`;
+          } else {
+            mentorText = `Whoa, that overshot past the target at ${val} ${unit}! Dial it back down toward the target band [${targetMin} - ${targetMax} ${unit}] and see how fast it drops!`;
+          }
+        } else { // Galileo Galilei
+          if (status === "SECURED") {
+            mentorText = `Magnificent! The empirical measure aligns with the geometric curve. At ${curX.toFixed(1)}, we recorded ${val} ${unit}, safely within the target haven. Nature confirms our mathematical deduction!`;
+          } else if (status === "UNDERSHOT") {
+            mentorText = `The measure of ${val} ${unit} remains beneath the required target. Let us calibrate ${primaryParam?.label || primaryKey} higher along the natural arc.`;
+          } else {
+            mentorText = `The resultant ${val} ${unit} has exceeded our target boundaries. Let us balance the proportions to bring our measure within [${targetMin} - ${targetMax} ${unit}].`;
           }
         }
 
@@ -1424,6 +2122,69 @@ export default function MissionActiveView() {
                               ...prev,
                               { sender: "MENTOR", text: preResponseText }
                             ]);
+                          } else if (mission.coreInteraction === "ENERGY_CONSERVATION") {
+                            let preResponseText = "";
+                            if (selectedMentor === "NEWTON") {
+                              if (selectedPresetId === "energy-linear") {
+                                preResponseText = "You hypothesize that doubling the drop height doubles the spring compression in direct proportion. But take care: the work done to compress a spring increases quadratically with distance (W = 1/2 k x²). Let us release the capsule and observe the telemetry.";
+                              } else if (selectedPresetId === "energy-impact-max") {
+                                preResponseText = "You expect the capsule to attain its greatest velocity at the initial touch of the spring. Yet at that moment (x = 0), the upward spring force is zero, while gravity still pulls downward (mg). Acceleration must continue until kx = mg. Let us observe this equilibrium.";
+                              } else {
+                                preResponseText = "A masterful understanding of mechanics! Total energy is invariant, and the capsule must accelerate past contact until net force is zero at kx = mg. Let us initiate the drop and verify the conservation of energy.";
+                              }
+                            } else if (selectedMentor === "FEYNMAN") {
+                              if (selectedPresetId === "energy-linear") {
+                                preResponseText = "You're betting that doubling the height doubles the spring squish! That sounds super logical at first glance. But a spring pushes back harder and harder the more you squish it! Let's drop the capsule and watch those energy bars!";
+                              } else if (selectedPresetId === "energy-impact-max") {
+                                preResponseText = "You think the capsule is fastest right when it smacks the spring! But wait: the spring hasn't even pushed back yet at the very top! Gravity is still pulling it down faster and faster until the spring pushes back just as hard! Watch that speed gauge past the contact line!";
+                              } else {
+                                preResponseText = "Bingo! Energy is conserved, and that capsule keeps speeding up until the spring force equals its weight! Let's launch the trial and watch those three energy bars trade places in perfect harmony!";
+                              }
+                            } else { // GALILEO or default
+                              if (selectedPresetId === "energy-linear") {
+                                preResponseText = "You expect a linear proportion between the height of the fall and the depth of the buffer's yield. Yet the resistance of elastic bodies grows with every inch compressed. Drop the capsule down the abyssal shaft and let us record the true measure.";
+                              } else if (selectedPresetId === "energy-impact-max") {
+                                preResponseText = "You anticipate that speed is greatest at the threshold of contact. But consider: does an object cease accelerating before an opposing force exceeds its weight? Release the capsule and watch the velocity vector past the buffer's top.";
+                              } else {
+                                preResponseText = "You have discerned nature's mathematical beauty! The downward fall continues its acceleration into the buffer until equilibrium is struck. Release the capsule down the Mariana shaft!";
+                              }
+                            }
+                            setChatLog((prev) => [
+                              ...prev,
+                              { sender: "MENTOR", text: preResponseText }
+                            ]);
+                          } else if (mission.coreInteraction === "PARAMETER_SANDBOX") {
+                            const cfg = mission.parameterSandboxConfig;
+                            const preset = mission.predictionPresets.find((p) => p.id === selectedPresetId);
+                            const presetLabel = preset?.label || "your prediction";
+                            const isMisconception = preset?.isMisconception || false;
+                            const relName = cfg?.relationshipType || "parametric";
+                            let preResponseText = "";
+
+                            if (selectedMentor === "NEWTON") {
+                              if (isMisconception) {
+                                preResponseText = `You have hypothesized: "${presetLabel}". Let us put this proposition to empirical trial. Does nature conform to this assumption, or does the mathematical law of ${relName} govern the system? Calibrate the controls and observe.`;
+                              } else {
+                                preResponseText = `A rigorous hypothesis: "${presetLabel}". If the underlying dynamics obey a ${relName} proportion, the recorded telemetry will confirm your deduction. Proceed to calibrate and verify the law.`;
+                              }
+                            } else if (selectedMentor === "FEYNMAN") {
+                              if (isMisconception) {
+                                preResponseText = `You're predicting: "${presetLabel}"! It's super tempting to think that at first! But let's run the real experiment on the graph and see if the curve agrees with your hunch! Dial the sliders and let's test it!`;
+                              } else {
+                                preResponseText = `Bingo! You're thinking "${presetLabel}"! Let's fire up the sandbox and watch if the data points land right on that sweet ${relName} curve!`;
+                              }
+                            } else { // Galileo or default
+                              if (isMisconception) {
+                                preResponseText = `You anticipate: "${presetLabel}". Common intuition often suggests this path, but nature reveals its secrets only through rigorous geometry. Calibrate the apparatus and let us measure the true curve.`;
+                              } else {
+                                preResponseText = `A noble hypothesis: "${presetLabel}". You have discerned the geometric balance of this phenomenon. Let us conduct the experiment and record nature's testimony!`;
+                              }
+                            }
+
+                            setChatLog((prev) => [
+                              ...prev,
+                              { sender: "MENTOR", text: preResponseText }
+                            ]);
                           }
                         }}
                         disabled={!selectedPresetId}
@@ -1531,6 +2292,72 @@ export default function MissionActiveView() {
                                   ...prev,
                                   { sender: "MENTOR", text: postResponseText }
                                 ]);
+                              } else if (mission.coreInteraction === "ENERGY_CONSERVATION") {
+                                let postResponseText = "";
+                                if (selectedMentor === "NEWTON") {
+                                  if (selectedPresetId === "energy-linear") {
+                                    postResponseText = "Observe the telemetry: doubling the drop height did not double the compression. Because stored spring potential scales quadratically (U_e = 1/2 k x²), compression only scales with the square root of energy! Reflect on how this refutes your linear assumption.";
+                                  } else if (selectedPresetId === "energy-impact-max") {
+                                    postResponseText = "Look closely at the velocity trace: the speed did not peak at contact (x = 0), but continued to increase until x = mg/k, where the upward spring force exactly balanced gravity. Reflect on why maximum speed coincides with zero net force.";
+                                  } else {
+                                    postResponseText = "A flawless confirmation of the Work-Energy Theorem! Total mechanical energy remained strictly invariant across every phase of the descent. Formulate your scientific findings on this conservation.";
+                                  }
+                                } else if (selectedMentor === "FEYNMAN") {
+                                  if (selectedPresetId === "energy-linear") {
+                                    postResponseText = "Look at that! Doubling the height didn't double the squish at all! That's because squishing a spring gets harder and harder the deeper you go (1/2 k x²). How does that change the way you think about spring energy?";
+                                  } else if (selectedPresetId === "energy-impact-max") {
+                                    postResponseText = "Check that out! The capsule was still speeding up even after it hit the spring! It didn't hit top speed until it reached that equilibrium line where the spring push matched its weight! Why did gravity win out during those first few meters?";
+                                  } else {
+                                    postResponseText = "You called it! Total energy stayed at 100% the entire time—like water flowing between three buckets! And peak speed happened right at that equilibrium line. How did the live energy bars help you see that?";
+                                  }
+                                } else { // GALILEO or default
+                                  if (selectedPresetId === "energy-linear") {
+                                    postResponseText = "The empirical record shows the non-linear harmony of nature. The depth of compression did not double with height, proving that elastic resistance accumulates quadratically. Reflect on this geometric truth.";
+                                  } else if (selectedPresetId === "energy-impact-max") {
+                                    postResponseText = "Behold: the speed increased beyond the threshold of the buffer, reaching its zenith only when the coils exerted a force equal to the capsule's weight. Reflect on why acceleration persisted past the point of impact.";
+                                  } else {
+                                    postResponseText = "Your prediction is confirmed by empirical telemetry. The sum of gravitational, kinetic, and elastic potential remains immutable throughout. State your formal findings on this eternal conservation.";
+                                  }
+                                }
+                                setChatLog((prev) => [
+                                  ...prev,
+                                  { sender: "MENTOR", text: postResponseText }
+                                ]);
+                              } else if (mission.coreInteraction === "PARAMETER_SANDBOX") {
+                                const cfg = mission.parameterSandboxConfig;
+                                const preset = mission.predictionPresets.find((p) => p.id === selectedPresetId);
+                                const presetLabel = preset?.label || "your prediction";
+                                const isMisconception = preset?.isMisconception || false;
+                                const relName = cfg?.relationshipType || "parametric";
+                                const latestLaunch = launches[0];
+                                const outVal = latestLaunch ? latestLaunch.outcomeValue : 0;
+                                const unit = cfg?.outputUnit || "";
+                                let postResponseText = "";
+
+                                if (selectedMentor === "NEWTON") {
+                                  if (isMisconception) {
+                                    postResponseText = `Examine your telemetry logs: the empirical measure produced ${outVal} ${unit}. Nature has not conformed to "${presetLabel}". The curve mathematically verifies a ${relName} relationship. Reflect upon the causes of this divergence.`;
+                                  } else {
+                                    postResponseText = `A triumphant verification! Your prediction of "${presetLabel}" aligns with the recorded outcome of ${outVal} ${unit}. The empirical data affirms the mathematical law of ${relName}. Detail your synthesis in the notebook.`;
+                                  }
+                                } else if (selectedMentor === "FEYNMAN") {
+                                  if (isMisconception) {
+                                    postResponseText = `Look at that graph! We got ${outVal} ${unit}, which totally breaks away from "${presetLabel}"! That's the beauty of science—when an experiment disagrees with a guess, the guess has gotta go! How does the shape of that curve explain what really happened?`;
+                                  } else {
+                                    postResponseText = `You nailed it! The sandbox gave us ${outVal} ${unit}, landing right on your prediction of "${presetLabel}"! Look at how neatly the real data tracks that ${relName} curve! What's the main takeaway here?`;
+                                  }
+                                } else { // Galileo or default
+                                  if (isMisconception) {
+                                    postResponseText = `The testimony of the apparatus is unequivocal: we recorded ${outVal} ${unit}. Your earlier anticipation of "${presetLabel}" yields to the true geometry of the phenomenon. State the mathematical principle revealed by this measurement.`;
+                                  } else {
+                                    postResponseText = `Nature has spoken with clarity! At ${outVal} ${unit}, the telemetry seals your prediction of "${presetLabel}". Record your reflections on this harmonious law of ${relName}.`;
+                                  }
+                                }
+
+                                setChatLog((prev) => [
+                                  ...prev,
+                                  { sender: "MENTOR", text: postResponseText }
+                                ]);
                               }
                             }}
                             className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-xl font-mono text-[11px] font-bold"
@@ -1571,7 +2398,7 @@ export default function MissionActiveView() {
                       ) : (
                         <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-950/15 flex flex-col gap-2 font-mono text-xs text-cyan-200">
                           <span className="text-[9px] font-bold uppercase text-cyan-400 tracking-wider flex items-center gap-1">
-                            <span>💡</span> {mission.coreInteraction === "INERTIA_BOUNDS" ? "NEWTON'S COGNITIVE ALIGNMENT" : "TRAJECTORY COGNITIVE ALIGNMENT"}
+                            <span>💡</span> {mission.coreInteraction === "INERTIA_BOUNDS" ? "NEWTON'S COGNITIVE ALIGNMENT" : mission.coreInteraction === "ENERGY_CONSERVATION" ? "WORK-ENERGY COGNITIVE ALIGNMENT" : mission.coreInteraction === "PARAMETER_SANDBOX" ? `${mission.coreScientificConcept?.name ? mission.coreScientificConcept.name.toUpperCase() + " " : ""}COGNITIVE ALIGNMENT` : "TRAJECTORY COGNITIVE ALIGNMENT"}
                           </span>
                           <p className="leading-relaxed text-[11px] text-gray-300">
                             {mission.coreInteraction === "INERTIA_BOUNDS" ? (
@@ -1588,6 +2415,41 @@ export default function MissionActiveView() {
                                   You predicted that the <strong className="text-white">rover would drift at constant velocity</strong> because there is no friction to slow it down. This is the essence of Newton's First Law!
                                 </>
                               )
+                            ) : mission.coreInteraction === "ENERGY_CONSERVATION" ? (
+                              selectedPresetId === "energy-linear" ? (
+                                <>
+                                  You predicted that <strong className="text-white">spring compression scales linearly with drop height</strong> (doubling height doubles compression). But the live telemetry bars proved that compression scales with the square root of height because spring potential energy is quadratic: <strong className="text-white">U_e = ½kx²</strong>!
+                                </>
+                              ) : selectedPresetId === "energy-impact-max" ? (
+                                <>
+                                  You predicted that <strong className="text-white">maximum velocity occurs at the moment of impact</strong>. However, the telemetry showed the capsule continued to accelerate downwards until reaching the equilibrium point <strong className="text-white">kx = mg</strong>, where net force is zero!
+                                </>
+                              ) : (
+                                <>
+                                  You predicted that <strong className="text-white">total mechanical energy is conserved</strong> and maximum velocity occurs at equilibrium (kx = mg). The live telemetry bars confirmed exact 100% energy conservation!
+                                </>
+                              )
+                            ) : mission.coreInteraction === "PARAMETER_SANDBOX" ? (
+                              (() => {
+                                const preset = mission.predictionPresets.find((p) => p.id === selectedPresetId);
+                                const isMisconception = preset?.isMisconception || false;
+                                const presetLabel = preset?.label || "your prediction";
+                                const cfg = mission.parameterSandboxConfig;
+                                const relName = cfg?.relationshipType || "parametric";
+                                if (isMisconception) {
+                                  return (
+                                    <>
+                                      You predicted that <strong className="text-white">{presetLabel}</strong>. However, empirical telemetry across multiple calibrated trials proved that the response follows a <strong className="text-white">{relName}</strong> mathematical relationship!
+                                    </>
+                                  );
+                                } else {
+                                  return (
+                                    <>
+                                      You predicted that <strong className="text-white">{presetLabel}</strong>. The calibrated sandbox data corroborated your hypothesis, showing exact conformity with the <strong className="text-white">{relName}</strong> law!
+                                    </>
+                                  );
+                                }
+                              })()
                             ) : (
                               selectedPresetId === "mass-equal" ? (
                                 <>
@@ -1611,6 +2473,25 @@ export default function MissionActiveView() {
                               ) : (
                                 "Explain how your prediction matches the uniform spacing of the beacon ribbon and the persistent emerald velocity vector during the glide phase."
                               )
+                            ) : mission.coreInteraction === "ENERGY_CONSERVATION" ? (
+                              selectedPresetId === "energy-linear" ? (
+                                "Why did doubling the drop height not double the spring compression? How does the Work-Energy Theorem (W = ΔK = ½kx²) explain this non-linear relationship?"
+                              ) : selectedPresetId === "energy-impact-max" ? (
+                                "Why was the capsule still speeding up even after making contact with the spring? At what exact point does acceleration become zero?"
+                              ) : (
+                                "Explain how the gravitational potential energy of the capsule transforms into kinetic energy, and then into elastic potential energy without any energy loss."
+                              )
+                            ) : mission.coreInteraction === "PARAMETER_SANDBOX" ? (
+                              (() => {
+                                const preset = mission.predictionPresets.find((p) => p.id === selectedPresetId);
+                                const isMisconception = preset?.isMisconception || false;
+                                const cfg = mission.parameterSandboxConfig;
+                                if (isMisconception) {
+                                  return `Explain why the recorded data diverged from your initial prediction. How does the ${cfg?.relationshipType || "parametric"} curve describe the underlying scientific mechanism?`;
+                                } else {
+                                  return `Synthesize your findings: how did the parameters and mathematical curve confirm your hypothesis?`;
+                                }
+                              })()
                             ) : (
                               selectedPresetId === "mass-equal" ? (
                                 "Reflect on why gravity pulls harder on the heavier safe, yet it falls at the exact same rate as the light wood crate."
