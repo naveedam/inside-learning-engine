@@ -77,6 +77,11 @@ class VoiceEngine {
   // In-memory session cache: key is `${mentorId}::${cleanText}`
   private cache: Map<string, VoiceCacheEntry> = new Map();
 
+  // One-time session tracking for autoplay notice
+  private hasShownAutoplayNotice: boolean = false;
+  private noticeElement: HTMLElement | null = null;
+  private noticeTimeout: ReturnType<typeof setTimeout> | null = null;
+
   // Subscriptions for React UI updates
   private speakingListeners: Set<(isSpeaking: boolean, text: string) => void> = new Set();
   private enabledListeners: Set<(enabled: boolean) => void> = new Set();
@@ -145,8 +150,10 @@ class VoiceEngine {
 
   /**
    * Replay a line of dialogue on-demand even if auto-narration is off.
+   * Direct student gesture - dismisses any previous autoplay notice.
    */
   public replay(text: string, mentorId: string = "GALILEO"): void {
+    this.dismissAutoplayNotice();
     this.playLine(text, mentorId, true);
   }
 
@@ -162,7 +169,7 @@ class VoiceEngine {
     // 1. Check in-memory session cache
     const cached = this.cache.get(cleanKey);
     if (cached) {
-      this.playAudioUrl(cached.url, text, requestId);
+      this.playAudioUrl(cached.url, text, requestId, forcePlay);
       return;
     }
 
@@ -198,7 +205,7 @@ class VoiceEngine {
         // Store in session cache
         this.cache.set(cleanKey, { url, blob });
 
-        this.playAudioUrl(url, text, requestId);
+        this.playAudioUrl(url, text, requestId, forcePlay);
       }
     } catch (err) {
       // Graceful silent fallback to text-only: learning flow never halts
@@ -206,7 +213,7 @@ class VoiceEngine {
     }
   }
 
-  private playAudioUrl(url: string, text: string, requestId: number) {
+  private playAudioUrl(url: string, text: string, requestId: number, isManualTrigger: boolean = false) {
     if (this.activeRequestId !== requestId) return;
 
     try {
@@ -218,6 +225,7 @@ class VoiceEngine {
         if (this.activeRequestId === requestId) {
           this.isSpeakingState = true;
           this.notifySpeaking();
+          this.dismissAutoplayNotice();
         }
       };
 
@@ -241,17 +249,169 @@ class VoiceEngine {
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Handled silently if browser autoplay requires user gesture
+        playPromise.catch((err: any) => {
+          // Explicitly distinguish audio.play() rejection (autoplay blocked) from network/fetch failures
+          console.warn("Autoplay blocked by browser - user must manually trigger playback:", err?.message || err);
+
           if (this.activeRequestId === requestId) {
             this.isSpeakingState = false;
+            this.currentSpokenText = "";
+            this.currentAudio = null;
             this.notifySpeaking();
+          }
+
+          // The first time autoplay is blocked in a session, surface a small, dismissible HUD notice
+          if (!isManualTrigger) {
+            this.showAutoplayNotice();
           }
         });
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.warn("Audio playback initialization error:", err?.message || err);
       this.isSpeakingState = false;
+      this.currentSpokenText = "";
+      this.currentAudio = null;
       this.notifySpeaking();
+    }
+  }
+
+  /**
+   * Surface a small, dismissible one-time HUD notice when browser blocks autoplay,
+   * suggesting the student tap the speaker icon next to a mentor's message.
+   */
+  private showAutoplayNotice() {
+    if (typeof document === "undefined" || this.hasShownAutoplayNotice) {
+      return;
+    }
+
+    try {
+      if (sessionStorage.getItem("voice_autoplay_notice_shown") === "true") {
+        this.hasShownAutoplayNotice = true;
+        return;
+      }
+      sessionStorage.setItem("voice_autoplay_notice_shown", "true");
+    } catch {
+      // Ignore sessionStorage restrictions if cookies/storage are disabled
+    }
+
+    this.hasShownAutoplayNotice = true;
+    this.dismissAutoplayNotice();
+
+    const noticeId = "mentor-voice-autoplay-notice";
+    const existing = document.getElementById(noticeId);
+    if (existing) {
+      existing.remove();
+    }
+
+    const container = document.createElement("div");
+    container.id = noticeId;
+    container.setAttribute("role", "status");
+    container.setAttribute("aria-live", "polite");
+
+    // Non-blocking, compact sci-fi HUD styling
+    container.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      max-width: 360px;
+      z-index: 9999;
+      background: rgba(10, 15, 29, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(6, 182, 212, 0.15);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #e2e8f0;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+      pointer-events: auto;
+    `;
+
+    container.innerHTML = `
+      <div style="flex-shrink: 0; margin-top: 2px; color: #22d3ee;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 11px; font-weight: 700; color: #38bdf8; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 2px;">
+          Enable Voice Narration
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
+          Tap the <span style="color: #38bdf8; font-weight: 600;">speaker icon (🔊)</span> next to any mentor message to hear voice transmissions.
+        </div>
+      </div>
+      <button
+        id="dismiss-voice-notice"
+        aria-label="Dismiss notice"
+        style="
+          background: transparent;
+          border: none;
+          color: #64748b;
+          cursor: pointer;
+          padding: 2px 4px;
+          margin-top: -2px;
+          margin-right: -4px;
+          font-size: 14px;
+          line-height: 1;
+          border-radius: 4px;
+          transition: color 0.15s;
+        "
+      >✕</button>
+    `;
+
+    document.body.appendChild(container);
+    this.noticeElement = container;
+
+    // Trigger enter transition
+    requestAnimationFrame(() => {
+      container.style.opacity = "1";
+      container.style.transform = "translateY(0)";
+    });
+
+    const closeBtn = container.querySelector("#dismiss-voice-notice");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.dismissAutoplayNotice();
+      });
+      closeBtn.addEventListener("mouseenter", () => {
+        (closeBtn as HTMLElement).style.color = "#f8fafc";
+      });
+      closeBtn.addEventListener("mouseleave", () => {
+        (closeBtn as HTMLElement).style.color = "#64748b";
+      });
+    }
+
+    // Auto-dismiss after 12 seconds
+    this.noticeTimeout = setTimeout(() => {
+      this.dismissAutoplayNotice();
+    }, 12000);
+  }
+
+  public dismissAutoplayNotice() {
+    if (this.noticeTimeout) {
+      clearTimeout(this.noticeTimeout);
+      this.noticeTimeout = null;
+    }
+    if (this.noticeElement) {
+      const el = this.noticeElement;
+      this.noticeElement = null;
+      el.style.opacity = "0";
+      el.style.transform = "translateY(8px)";
+      setTimeout(() => {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+      }, 250);
     }
   }
 
