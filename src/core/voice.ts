@@ -80,6 +80,15 @@ class VoiceEngine {
   // Opt-in feature: default to OFF
   private enabled: boolean = false;
   private currentAudio: HTMLAudioElement | null = null;
+  // Single persistent, reused <audio> element. Browsers are far more reliable
+  // about permitting later, asynchronously-triggered play() calls on an
+  // element that has ALREADY been played once as the direct result of a
+  // click, than they are about a brand-new Audio() instantiated fresh for
+  // every line (which the code previously did). Unlocked once via
+  // unlockAudio() inside a guaranteed direct user gesture (the "DEPLOY TO
+  // COCKPIT" click), then reused for every subsequent mentor line.
+  private audioElement: HTMLAudioElement | null = null;
+  private isUnlocked: boolean = false;
   private currentlyPlaying: VoiceQueueItem | null = null;
   private pendingQueue: VoiceQueueItem[] = [];
   private queueSeq: number = 0;
@@ -100,6 +109,46 @@ class VoiceEngine {
 
   constructor() {
     // Check initial server availability if needed
+  }
+
+  /**
+   * Unlock audio playback for this session. MUST be called synchronously
+   * from inside a direct user gesture handler (e.g. a button onClick) -
+   * calling it from a useEffect, a promise callback, or any other
+   * non-gesture context will not satisfy browser autoplay policy and
+   * defeats the purpose. Safe to call multiple times; only does real work
+   * once per session.
+   */
+  public unlockAudio(): void {
+    if (this.isUnlocked) return;
+    try {
+      if (!this.audioElement) {
+        this.audioElement = new Audio();
+      }
+      // Smallest valid silent WAV, played once to establish that this
+      // element has successfully played as a direct result of user
+      // interaction. Browsers then treat later programmatic play() calls
+      // on this SAME element much more leniently than on a fresh element.
+      this.audioElement.src =
+        "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAAAAA==";
+      const p = this.audioElement.play();
+      if (p !== undefined) {
+        p.then(() => {
+          this.isUnlocked = true;
+        }).catch((err: any) => {
+          // Even if this priming play is itself rejected, mark unlocked
+          // anyway - the element having ATTEMPTED play from a direct
+          // gesture is what matters for most browsers' heuristics, and we
+          // don't want to keep retrying the silent clip on every click.
+          console.warn("Audio unlock priming play rejected (continuing anyway):", err?.message || err);
+          this.isUnlocked = true;
+        });
+      } else {
+        this.isUnlocked = true;
+      }
+    } catch (err) {
+      console.warn("Audio unlock failed:", err);
+    }
   }
 
   public getEnabled(): boolean {
@@ -355,7 +404,14 @@ class VoiceEngine {
     if (!item.url) return;
 
     try {
-      const audio = new Audio(item.url);
+      // Reuse the single unlocked element rather than instantiating a new
+      // Audio() per line - see unlockAudio() for why this matters.
+      if (!this.audioElement) {
+        this.audioElement = new Audio();
+      }
+      const audio = this.audioElement;
+      audio.src = item.url;
+      audio.currentTime = 0;
       this.currentAudio = audio;
       this.currentlyPlaying = item;
       item.status = "playing";
