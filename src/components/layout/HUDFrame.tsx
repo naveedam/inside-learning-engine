@@ -8,8 +8,14 @@ import { useEngineStore } from "../../core/stores";
 import { Volume2, VolumeX, Radio, Compass, ShieldAlert, Cpu, Trophy, BookOpen } from "lucide-react";
 
 export default function HUDFrame() {
-  const { xp, streak, soundEnabled, toggleSound, currentView, setView } = useEngineStore();
+  const { xp, streak, soundEnabled, toggleSound, currentView, setView, selectSubject, selectChapter } = useEngineStore();
   const [timeStr, setTimeStr] = useState("00:00:00 UTC");
+
+  const navigateToHub = () => {
+    selectSubject(null);
+    selectChapter(null);
+    setView("constellation");
+  };
 
   // Real-time clock synchronizer
   useEffect(() => {
@@ -33,14 +39,18 @@ export default function HUDFrame() {
       
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left Side: Logo & System Indicator */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg border border-cyan-500/30 bg-cyan-950/20 text-cyan-400">
+        <div 
+          onClick={navigateToHub}
+          className="flex items-center gap-3 cursor-pointer group"
+          title="Return to Disciplinary Subject Hub"
+        >
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 group-hover:border-cyan-400 transition-colors">
             <Cpu size={16} className="animate-pulse" />
             <span className="absolute -inset-1 rounded-lg border border-cyan-400/20 animate-ping opacity-30" />
           </div>
 
           <div className="flex flex-col">
-            <span className="font-display font-semibold text-sm tracking-widest text-white flex items-center gap-1.5 uppercase">
+            <span className="font-display font-semibold text-sm tracking-widest text-white flex items-center gap-1.5 uppercase group-hover:text-cyan-300 transition-colors">
               Inside Learning Engine
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
             </span>
@@ -68,17 +78,17 @@ export default function HUDFrame() {
 
         {/* Right Side: Navigation, Streaks, XP, Sound Toggle */}
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Constellation Star Map Link */}
+          {/* Constellation Star Map / Subject Hub Link */}
           <button
-            onClick={() => setView("constellation")}
-            className={`px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wider flex items-center gap-1.5 transition-all ${
+            onClick={navigateToHub}
+            className={`px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
               currentView === "constellation" || currentView === "mission-details"
                 ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 glow-cyan"
                 : "bg-white/5 border-transparent text-gray-300 hover:bg-white/10"
             }`}
           >
             <Compass size={12} />
-            <span className="hidden sm:inline">STAR MAP</span>
+            <span className="hidden sm:inline">SUBJECT HUB</span>
           </button>
 
           {/* Lab Journal Link */}

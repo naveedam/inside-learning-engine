@@ -29,9 +29,10 @@ export default function ChapterMissionExplorer() {
       {/* Return button */}
       <button
         onClick={() => selectChapter(null)}
-        className="mb-6 px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-400 hover:text-white flex items-center gap-1.5 transition-all self-start border border-white/5 active:scale-95"
+        className="mb-6 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all self-start border border-white/10 active:scale-95 cursor-pointer"
       >
-        <ChevronLeft size={14} /> BACK TO STAR MAP
+        <ChevronLeft size={14} className="text-gray-400" />
+        <span>BACK TO {pack?.subject ? `${pack.subject.toUpperCase()} SYLLABUS` : "SYLLABUS"}</span>
       </button>
 
       {/* Chapter Overview Panel */}

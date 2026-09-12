@@ -4,18 +4,9 @@
  */
 
 import React, { useState } from "react";
-import { getAllCurriculumPacks } from "../../content/registry";
+import { getAllCurriculumPacks, isChapterActive } from "../../content/registry";
 import { useEngineStore } from "../../core/stores";
 import { Compass, Trophy, Atom, Beaker, BookOpen, Dna, ArrowRight, Zap, AlertCircle, Clock, LucideIcon } from "lucide-react";
-
-const BUILT_CHAPTER_IDS = new Set([
-  "kinematics-1d",
-  "newtons-laws",
-  "energy-depths",
-  "stoichiometry-reactions",
-  "limits-derivatives",
-  "plant-physiology"
-]);
 
 const getIcon = (iconName: string): LucideIcon => {
   switch (iconName) {
@@ -98,9 +89,9 @@ export default function ConstellationMap() {
     }))
   );
 
-  const handleNodeClick = (chapterId: string, subject: string, isBuilt: boolean) => {
+  const handleNodeClick = (chapterId: string, chapterTitle: string, isBuilt: boolean) => {
     if (!isBuilt) {
-      setStandbyNotice(`The ${subject} simulation chamber is currently in development (Coming Online). Active laboratories: Physics, Chemistry, Mathematics, and Biology.`);
+      setStandbyNotice(`The "${chapterTitle}" research chamber is currently in development (Coming Online).`);
       return;
     }
     setStandbyNotice(null);
@@ -178,7 +169,7 @@ export default function ConstellationMap() {
           {allChapters.map((ch, idx) => {
             if (idx === allChapters.length - 1) return null;
             const nextCh = allChapters[idx + 1];
-            const bothBuilt = BUILT_CHAPTER_IDS.has(ch.id) && BUILT_CHAPTER_IDS.has(nextCh.id);
+            const bothBuilt = isChapterActive(ch) && isChapterActive(nextCh);
             return (
               <line
                 key={`line-${ch.id}`}
@@ -198,7 +189,7 @@ export default function ConstellationMap() {
         {/* Render all Chapter Star Nodes */}
         {allChapters.map((chapter) => {
           const pos = chapter.constellationPosition;
-          const isBuilt = BUILT_CHAPTER_IDS.has(chapter.id);
+          const isBuilt = isChapterActive(chapter);
           const colors = getColorClasses(chapter.packColor);
           const IconComponent = getIcon(chapter.packIcon);
 
@@ -209,7 +200,7 @@ export default function ConstellationMap() {
               className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
             >
               <div 
-                onClick={() => handleNodeClick(chapter.id, chapter.packSubject, isBuilt)}
+                onClick={() => handleNodeClick(chapter.id, chapter.title, isBuilt)}
                 className={`relative group flex flex-col items-center ${isBuilt ? "cursor-pointer" : "cursor-not-allowed"}`}
               >
                 {/* Outer halo circular ring pulse (only for built active labs) */}
@@ -226,7 +217,7 @@ export default function ConstellationMap() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleNodeClick(chapter.id, chapter.packSubject, isBuilt);
+                    handleNodeClick(chapter.id, chapter.title, isBuilt);
                   }}
                   className={`w-12 h-12 rounded-full border-2 flex items-center justify-center relative z-10 transition-all duration-300 ${
                     isBuilt

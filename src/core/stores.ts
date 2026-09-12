@@ -24,6 +24,7 @@ export interface NotebookEntry {
 
 interface EngineState {
   currentView: ActiveView;
+  selectedSubjectId: string | null;
   selectedChapterId: string | null;
   activeMissionId: string | null;
   activeStepIndex: number;
@@ -47,6 +48,7 @@ interface EngineState {
 
   // Actions
   setView: (view: ActiveView) => void;
+  selectSubject: (subjectId: string | null) => void;
   selectChapter: (chapterId: string | null) => void;
   startMission: (missionId: string) => void;
   setStepIndex: (index: number) => void;
@@ -74,6 +76,7 @@ interface EngineState {
 
 export const useEngineStore = create<EngineState>((set) => ({
   currentView: "constellation",
+  selectedSubjectId: null,
   selectedChapterId: null,
   activeMissionId: null,
   activeStepIndex: 0,
@@ -108,9 +111,21 @@ export const useEngineStore = create<EngineState>((set) => ({
     set({ currentView: view });
   },
 
+  selectSubject: (subjectId) => {
+    audioEngine.playClick();
+    set({
+      selectedSubjectId: subjectId,
+      selectedChapterId: null,
+      currentView: "constellation"
+    });
+  },
+
   selectChapter: (chapterId) => {
     audioEngine.playClick();
-    set({ selectedChapterId: chapterId, currentView: chapterId ? "mission-details" : "constellation" });
+    set({
+      selectedChapterId: chapterId,
+      currentView: chapterId ? "mission-details" : "constellation"
+    });
   },
 
   startMission: (missionId) => {

@@ -8,13 +8,15 @@ import { useEngineStore } from "./core/stores";
 import { globalEventBus } from "./core/EventBus";
 import { audioEngine } from "./core/audio";
 import HUDFrame from "./components/layout/HUDFrame";
+import SubjectHub from "./components/layout/SubjectHub";
+import SubjectChapterTrail from "./components/layout/SubjectChapterTrail";
 import ConstellationMap from "./components/layout/ConstellationMap";
 import ChapterMissionExplorer from "./components/layout/ChapterMissionExplorer";
 import MissionActiveView from "./components/layout/MissionActiveView";
 import LabNotebook from "./components/layout/LabNotebook";
 
 export default function App() {
-  const { currentView, soundEnabled } = useEngineStore();
+  const { currentView, soundEnabled, selectedSubjectId } = useEngineStore();
 
   // 1. Synchronize mute state with Zustand sound setting
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function App() {
   const renderMainContent = () => {
     switch (currentView) {
       case "constellation":
-        return <ConstellationMap />;
+        return selectedSubjectId ? <SubjectChapterTrail /> : <SubjectHub />;
       case "mission-details":
         return <ChapterMissionExplorer />;
       case "mission-active":
@@ -89,7 +91,7 @@ export default function App() {
       case "journal":
         return <LabNotebook />;
       default:
-        return <ConstellationMap />;
+        return selectedSubjectId ? <SubjectChapterTrail /> : <SubjectHub />;
     }
   };
 
