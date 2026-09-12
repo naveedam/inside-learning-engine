@@ -4,9 +4,9 @@
  */
 
 import React, { useEffect, useRef } from "react";
-import { getAllCurriculumPacks, getPackActiveChaptersCount, isChapterActive } from "../../content/registry";
+import { getAllCurriculumPacks, getPackActiveChaptersCount, isChapterActive, getChapterStatus } from "../../content/registry";
 import { useEngineStore } from "../../core/stores";
-import { Atom, Beaker, Compass, Dna, ArrowRight, Zap, BookOpen, Layers, CheckCircle2, Clock } from "lucide-react";
+import { Atom, Beaker, Compass, Dna, ArrowRight, Zap, BookOpen, Layers, CheckCircle2, Clock, MinusCircle } from "lucide-react";
 import { CurriculumPack } from "../../types";
 
 // ============================================================================
@@ -362,9 +362,10 @@ interface GaugeProps {
   total: number;
   accentColor: string;
   themeText: string;
+  notPlanned?: number;
 }
 
-function ReactorProgressGauge({ active, total, accentColor, themeText }: GaugeProps) {
+function ReactorProgressGauge({ active, total, accentColor, themeText, notPlanned = 0 }: GaugeProps) {
   const activePercent = Math.round((active / total) * 100);
   const radius = 22;
   const circumference = 2 * Math.PI * radius;
@@ -384,6 +385,7 @@ function ReactorProgressGauge({ active, total, accentColor, themeText }: GaugePr
   };
 
   const strokeColor = getStrokeColor(accentColor);
+  const comingOnlineCount = total - active - notPlanned;
 
   return (
     <div className="flex items-center gap-4 py-1">
@@ -473,7 +475,13 @@ function ReactorProgressGauge({ active, total, accentColor, themeText }: GaugePr
 
         <div className="flex items-center justify-between font-mono text-[9px] text-gray-500 uppercase tracking-wider">
           <span>{active} SECTORS OPERATIONAL</span>
-          <span>{total - active > 0 ? `+${total - active} ON STANDBY` : "EXPEDITION FULLY CHARTED"}</span>
+          <span>
+            {total - active > 0
+              ? notPlanned > 0
+                ? `+${comingOnlineCount} ONLINE • ${notPlanned} DEFERRED`
+                : `+${total - active} ON STANDBY`
+              : "EXPEDITION FULLY CHARTED"}
+          </span>
         </div>
       </div>
     </div>
@@ -702,34 +710,50 @@ export default function SubjectHub() {
 
               {/* Middle Section: Diegetic HUD Reactor Gauge */}
               <div className="relative z-10 my-3">
-                <ReactorProgressGauge
-                  active={active}
-                  total={total}
-                  accentColor={pack.accentColor}
-                  themeText={theme.text}
-                />
+                {(() => {
+                  const notPlannedCount = pack.chapters.filter(ch => getChapterStatus(ch) === "Not Planned").length;
+                  const comingOnlineCount = total - active - notPlannedCount;
 
-                {/* Active Sectors Bullet Summary */}
-                <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-                  <span className="font-mono text-[10px] text-gray-500 uppercase tracking-wider mr-1">
-                    ACTIVE:
-                  </span>
-                  {activeChapterNames.map((name, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 rounded-md border border-white/10 bg-white/5 text-[11px] font-mono text-gray-300 flex items-center gap-1 group-hover:border-white/20 transition-colors"
-                    >
-                      <CheckCircle2 size={10} className={theme.text} />
-                      {name}
-                    </span>
-                  ))}
-                  {total > active && (
-                    <span className="px-2 py-0.5 rounded-md border border-dashed border-gray-700/60 bg-gray-900/40 text-[10px] font-mono text-gray-500 flex items-center gap-1">
-                      <Clock size={10} />
-                      +{total - active} Coming Online
-                    </span>
-                  )}
-                </div>
+                  return (
+                    <>
+                      <ReactorProgressGauge
+                        active={active}
+                        total={total}
+                        accentColor={pack.accentColor}
+                        themeText={theme.text}
+                        notPlanned={notPlannedCount}
+                      />
+
+                      {/* Active Sectors Bullet Summary */}
+                      <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                        <span className="font-mono text-[10px] text-gray-500 uppercase tracking-wider mr-1">
+                          ACTIVE:
+                        </span>
+                        {activeChapterNames.map((name, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-md border border-white/10 bg-white/5 text-[11px] font-mono text-gray-300 flex items-center gap-1 group-hover:border-white/20 transition-colors"
+                          >
+                            <CheckCircle2 size={10} className={theme.text} />
+                            {name}
+                          </span>
+                        ))}
+                        {comingOnlineCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-md border border-dashed border-gray-700/60 bg-gray-900/40 text-[10px] font-mono text-gray-500 flex items-center gap-1">
+                            <Clock size={10} />
+                            +{comingOnlineCount} Coming Online
+                          </span>
+                        )}
+                        {notPlannedCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-md border border-gray-800 bg-gray-950/40 text-[10px] font-mono text-gray-500 flex items-center gap-1">
+                            <MinusCircle size={10} />
+                            {notPlannedCount} Not Planned
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Bottom CTA Action Bar */}

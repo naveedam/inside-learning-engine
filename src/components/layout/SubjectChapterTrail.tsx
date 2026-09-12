@@ -4,11 +4,11 @@
  */
 
 import React, { useState } from "react";
-import { getCurriculumPackById, isChapterActive } from "../../content/registry";
+import { getCurriculumPackById, isChapterActive, getChapterStatus } from "../../content/registry";
 import { useEngineStore } from "../../core/stores";
 import { 
   ChevronLeft, Atom, Beaker, Compass, Dna, BookOpen, Layers, 
-  ArrowRight, CheckCircle2, Clock, Lock, AlertCircle, Play, Sparkles
+  ArrowRight, CheckCircle2, Clock, Lock, AlertCircle, Play, Sparkles, MinusCircle
 } from "lucide-react";
 import { Chapter } from "../../types";
 
@@ -108,7 +108,12 @@ export default function SubjectChapterTrail() {
       setStandbyToast(null);
       selectChapter(chapter.id);
     } else {
-      setStandbyToast(`The "${chapter.title}" research chamber is currently in development (Coming Online).`);
+      const status = getChapterStatus(chapter);
+      if (status === "Not Planned") {
+        setStandbyToast(`The "${chapter.title}" sector is not planned for simulation per expedition roadmap.`);
+      } else {
+        setStandbyToast(`The "${chapter.title}" research chamber is currently in development (Coming Online).`);
+      }
     }
   };
 
@@ -203,6 +208,7 @@ export default function SubjectChapterTrail() {
         <div className="flex flex-col gap-6 relative z-10">
           {pack.chapters.map((chapter, index) => {
             const isActive = isChapterActive(chapter);
+            const status = getChapterStatus(chapter);
             const chapterNum = String(index + 1).padStart(2, "0");
             const hasCompleted = chapter.missions.some(m => completedMissions.includes(m.id));
 
@@ -213,6 +219,8 @@ export default function SubjectChapterTrail() {
                 className={`group relative flex flex-col md:flex-row items-start md:items-center gap-4 sm:gap-6 p-5 sm:p-6 rounded-3xl border transition-all duration-300 ${
                   isActive
                     ? `border-white/10 hover:border-white/20 bg-gray-950/70 hover:bg-gray-950/90 ${styles.glow} cursor-pointer`
+                    : status === "Not Planned"
+                    ? "border-gray-900 bg-gray-950/20 opacity-50 hover:opacity-75 cursor-pointer"
                     : "border-white/5 bg-gray-950/30 opacity-70 hover:opacity-90 cursor-pointer"
                 }`}
               >
@@ -236,6 +244,11 @@ export default function SubjectChapterTrail() {
                       <span className="px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-950/60 text-emerald-300 font-mono text-[9px] font-bold tracking-wider uppercase flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         ACTIVE & READY
+                      </span>
+                    ) : status === "Not Planned" ? (
+                      <span className="px-2 py-0.5 rounded-full border border-gray-700/60 bg-gray-900/60 text-gray-400 font-mono text-[9px] font-semibold tracking-wider uppercase flex items-center gap-1">
+                        <MinusCircle size={10} />
+                        NOT PLANNED
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-300 font-mono text-[9px] font-semibold tracking-wider uppercase flex items-center gap-1">
@@ -286,6 +299,11 @@ export default function SubjectChapterTrail() {
                       <span>ENTER CHAMBER</span>
                       <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
                     </button>
+                  ) : status === "Not Planned" ? (
+                    <div className="px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-950/40 text-gray-500 font-mono text-[11px] flex items-center gap-1.5">
+                      <MinusCircle size={12} />
+                      <span>NOT PLANNED</span>
+                    </div>
                   ) : (
                     <div className="px-3 py-1.5 rounded-xl border border-dashed border-gray-700/60 bg-gray-900/40 text-gray-500 font-mono text-[11px] flex items-center gap-1.5">
                       <Lock size={12} />
