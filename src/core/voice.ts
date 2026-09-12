@@ -66,11 +66,23 @@ function base64ToAudioBlob(base64Data: string, mimeType: string): Blob {
   return new Blob([header, bytes], { type: "audio/wav" });
 }
 
+interface VoiceQueueItem {
+  id: number;
+  text: string;
+  mentorId: string;
+  cleanKey: string;
+  isManualTrigger: boolean;
+  status: "fetching" | "ready" | "playing" | "discarded";
+  url?: string;
+}
+
 class VoiceEngine {
   // Opt-in feature: default to OFF
   private enabled: boolean = false;
   private currentAudio: HTMLAudioElement | null = null;
-  private activeRequestId: number = 0;
+  private currentlyPlaying: VoiceQueueItem | null = null;
+  private pendingQueue: VoiceQueueItem[] = [];
+  private queueSeq: number = 0;
   private isSpeakingState: boolean = false;
   private currentSpokenText: string = "";
 
@@ -116,10 +128,9 @@ class VoiceEngine {
   }
 
   /**
-   * Immediately cancel any running audio playback and release listeners.
+   * Immediately cancel any running audio playback, empty the queue, and release listeners.
    */
   public stop() {
-    this.activeRequestId++;
     if (this.currentAudio) {
       try {
         this.currentAudio.pause();
@@ -130,46 +141,137 @@ class VoiceEngine {
       }
       this.currentAudio = null;
     }
+
+    for (const item of this.pendingQueue) {
+      item.status = "discarded";
+    }
+    this.pendingQueue = [];
+    this.currentlyPlaying = null;
     this.isSpeakingState = false;
     this.currentSpokenText = "";
     this.notifySpeaking();
   }
 
   /**
-   * Synthesize and play dialogue for a mentor.
+   * Discard non-manual items if autoplay was blocked by browser policy.
+   */
+  private clearPendingAutoItems() {
+    for (const item of this.pendingQueue) {
+      if (!item.isManualTrigger) {
+        item.status = "discarded";
+      }
+    }
+    this.pendingQueue = this.pendingQueue.filter((i) => i.isManualTrigger);
+  }
+
+  /**
+   * Synthesize and queue dialogue for a mentor.
    * - Non-blocking: returns immediately while audio streams / plays in background.
-   * - Cancels previous playback so mentors never talk over each other.
+   * - Uses a bounded queue (capped at 2 pending items).
+   * - If a 3rd item arrives while 2 are already pending, drops the OLDEST queued item
+   *   so playback cannot lag arbitrarily far behind the visible text.
    * - Checks cache first before making network call.
    * - Falls back silently to text-only if network or TTS fails.
    */
   public speak(text: string, mentorId: string = "GALILEO"): void {
     // If feature is disabled by student, do nothing
     if (!this.enabled) return;
-    this.playLine(text, mentorId, false);
+    if (!text || !text.trim()) return;
+
+    const cleanKey = `${mentorId.toUpperCase()}::${text.trim()}`;
+
+    // Avoid duplicate queue entries if the identical line is already playing or pending
+    if (this.currentlyPlaying?.cleanKey === cleanKey) {
+      return;
+    }
+    if (this.pendingQueue.some((i) => i.cleanKey === cleanKey)) {
+      return;
+    }
+
+    // Bounded queue: cap at 2 pending items
+    // If a third supersedes while 2 are already queued, drop only the OLDEST queued item
+    if (this.pendingQueue.length >= 2) {
+      const oldest = this.pendingQueue.shift()!;
+      oldest.status = "discarded";
+    }
+
+    const item: VoiceQueueItem = {
+      id: ++this.queueSeq,
+      text,
+      mentorId,
+      cleanKey,
+      isManualTrigger: false,
+      status: "fetching",
+    };
+
+    this.pendingQueue.push(item);
+    this.fetchOrLoadItemAudio(item);
   }
 
   /**
    * Replay a line of dialogue on-demand even if auto-narration is off.
    * Direct student gesture - dismisses any previous autoplay notice.
+   * Jumps the queue: immediately interrupts currently-playing audio and clears pending auto items.
    */
   public replay(text: string, mentorId: string = "GALILEO"): void {
     this.dismissAutoplayNotice();
-    this.playLine(text, mentorId, true);
-  }
-
-  private async playLine(text: string, mentorId: string, forcePlay: boolean) {
     if (!text || !text.trim()) return;
 
-    // Stop any existing playback
-    this.stop();
+    // Immediately interrupt currently-playing audio
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+        this.currentAudio.src = "";
+      } catch (err) {
+        // ignore
+      }
+      this.currentAudio = null;
+    }
+    this.currentlyPlaying = null;
+    this.isSpeakingState = false;
+    this.currentSpokenText = "";
+    this.notifySpeaking();
 
-    const requestId = ++this.activeRequestId;
+    // Replay jumps the queue: clear any pending auto-narration items
+    for (const item of this.pendingQueue) {
+      item.status = "discarded";
+    }
+    this.pendingQueue = [];
+
     const cleanKey = `${mentorId.toUpperCase()}::${text.trim()}`;
+    const replayItem: VoiceQueueItem = {
+      id: ++this.queueSeq,
+      text,
+      mentorId,
+      cleanKey,
+      isManualTrigger: true,
+      status: "fetching",
+    };
 
-    // 1. Check in-memory session cache
+    // Fast synchronous cache hit: play immediately inside the user click gesture
     const cached = this.cache.get(cleanKey);
     if (cached) {
-      this.playAudioUrl(cached.url, text, requestId, forcePlay);
+      replayItem.url = cached.url;
+      replayItem.status = "ready";
+      this.playItem(replayItem);
+      return;
+    }
+
+    // If not cached, enqueue at the front and fetch
+    this.pendingQueue.push(replayItem);
+    this.fetchOrLoadItemAudio(replayItem);
+  }
+
+  private async fetchOrLoadItemAudio(item: VoiceQueueItem) {
+    // 1. Check in-memory session cache
+    const cached = this.cache.get(item.cleanKey);
+    if (cached) {
+      item.url = cached.url;
+      if (item.status !== "discarded") {
+        item.status = "ready";
+        this.processQueue();
+      }
       return;
     }
 
@@ -178,51 +280,89 @@ class VoiceEngine {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, mentorId })
+        body: JSON.stringify({ text: item.text, mentorId: item.mentorId }),
       });
 
       if (!res.ok) {
-        // Silent graceful fallback
+        this.handleItemFailed(item);
         return;
       }
 
       const data = await res.json();
-
-      // Check if another request superseded this one while waiting
-      if (this.activeRequestId !== requestId) {
-        return;
-      }
-
-      // Check if disabled while fetching (unless student explicitly pressed replay)
-      if (!this.enabled && !forcePlay) {
-        return;
-      }
 
       if (data.audio) {
         const blob = base64ToAudioBlob(data.audio, data.mimeType || "audio/wav");
         const url = URL.createObjectURL(blob);
 
         // Store in session cache
-        this.cache.set(cleanKey, { url, blob });
+        this.cache.set(item.cleanKey, { url, blob });
+        item.url = url;
 
-        this.playAudioUrl(url, text, requestId, forcePlay);
+        if (item.status !== "discarded") {
+          item.status = "ready";
+          this.processQueue();
+        }
+      } else {
+        this.handleItemFailed(item);
       }
     } catch (err) {
       // Graceful silent fallback to text-only: learning flow never halts
-      console.warn("Mentor voice uplink unavailable, continuing in text mode.");
+      this.handleItemFailed(item);
     }
   }
 
-  private playAudioUrl(url: string, text: string, requestId: number, isManualTrigger: boolean = false) {
-    if (this.activeRequestId !== requestId) return;
+  private handleItemFailed(item: VoiceQueueItem) {
+    if (item.status === "discarded") return;
+    const idx = this.pendingQueue.indexOf(item);
+    if (idx !== -1) {
+      this.pendingQueue.splice(idx, 1);
+    }
+    item.status = "discarded";
+    this.processQueue();
+  }
+
+  /**
+   * Inspect the queue and play the next available item in chronological dialogue order.
+   */
+  private processQueue() {
+    // If currently playing something, wait for onended
+    if (this.currentlyPlaying) {
+      return;
+    }
+
+    // If disabled and not a manual replay, clear auto items
+    if (!this.enabled) {
+      this.pendingQueue = this.pendingQueue.filter((i) => i.isManualTrigger);
+      if (this.pendingQueue.length === 0) return;
+    }
+
+    if (this.pendingQueue.length === 0) {
+      return;
+    }
+
+    // Examine the oldest pending item in chronological order
+    const nextItem = this.pendingQueue[0];
+
+    // If ready, dequeue and play
+    if (nextItem.status === "ready" && nextItem.url) {
+      this.pendingQueue.shift();
+      this.playItem(nextItem);
+    }
+    // If nextItem is still 'fetching', we preserve chronological dialogue order and wait for it
+  }
+
+  private playItem(item: VoiceQueueItem) {
+    if (!item.url) return;
 
     try {
-      const audio = new Audio(url);
+      const audio = new Audio(item.url);
       this.currentAudio = audio;
-      this.currentSpokenText = text;
+      this.currentlyPlaying = item;
+      item.status = "playing";
+      this.currentSpokenText = item.text;
 
       audio.onplay = () => {
-        if (this.activeRequestId === requestId) {
+        if (this.currentlyPlaying === item) {
           this.isSpeakingState = true;
           this.notifySpeaking();
           this.dismissAutoplayNotice();
@@ -230,20 +370,25 @@ class VoiceEngine {
       };
 
       audio.onended = () => {
-        if (this.activeRequestId === requestId) {
+        if (this.currentlyPlaying === item) {
           this.isSpeakingState = false;
           this.currentSpokenText = "";
           this.currentAudio = null;
+          this.currentlyPlaying = null;
           this.notifySpeaking();
+          this.processQueue();
         }
       };
 
       audio.onerror = () => {
-        if (this.activeRequestId === requestId) {
+        console.warn("Audio playback error on item:", item.text);
+        if (this.currentlyPlaying === item) {
           this.isSpeakingState = false;
           this.currentSpokenText = "";
           this.currentAudio = null;
+          this.currentlyPlaying = null;
           this.notifySpeaking();
+          this.processQueue();
         }
       };
 
@@ -253,16 +398,17 @@ class VoiceEngine {
           // Explicitly distinguish audio.play() rejection (autoplay blocked) from network/fetch failures
           console.warn("Autoplay blocked by browser - user must manually trigger playback:", err?.message || err);
 
-          if (this.activeRequestId === requestId) {
+          if (this.currentlyPlaying === item) {
             this.isSpeakingState = false;
             this.currentSpokenText = "";
             this.currentAudio = null;
+            this.currentlyPlaying = null;
             this.notifySpeaking();
           }
 
-          // The first time autoplay is blocked in a session, surface a small, dismissible HUD notice
-          if (!isManualTrigger) {
+          if (!item.isManualTrigger) {
             this.showAutoplayNotice();
+            this.clearPendingAutoItems();
           }
         });
       }
@@ -271,7 +417,9 @@ class VoiceEngine {
       this.isSpeakingState = false;
       this.currentSpokenText = "";
       this.currentAudio = null;
+      this.currentlyPlaying = null;
       this.notifySpeaking();
+      this.processQueue();
     }
   }
 
