@@ -41,11 +41,11 @@ export default function HUDFrame() {
 
           <div className="flex flex-col">
             <span className="font-display font-semibold text-sm tracking-widest text-white flex items-center gap-1.5 uppercase">
-              Inside Physics
+              Inside Learning Engine
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
             </span>
             <span className="font-mono text-[9px] text-cyan-500/70 tracking-widest uppercase">
-              SYSTEM ENGINE v1.0.0
+              MULTI-DISCIPLINE RESEARCH PLATFORM v1.4.0
             </span>
           </div>
         </div>

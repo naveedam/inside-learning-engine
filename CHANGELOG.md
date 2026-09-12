@@ -4,6 +4,34 @@ All notable changes to the Inside Learning Engine will be documented in this fil
 
 ---
 
+## [1.5.0] - 2026-09-12
+### Phase 4: Biology Curriculum Pack & "The Law of Limiting Factors"
+
+Introduced the **Biology Class XI Curriculum Pack** (`biology-class-11`) along with its inaugural mission, **"The Law of Limiting Factors: Photosynthesis Chamber"**, in the **Plant Physiology** chapter, powered entirely by the reusable `PARAMETER_SANDBOX` engine with the `RATE_LIMITED` relationship type.
+
+### Added
+*   **Biology Class XI Curriculum Pack (`src/content/biology_class_11/plant_physiology.ts`):**
+    *   Curriculum Pack ID: `biology-class-11`, Subject: Biology, Grade: ISC Class XI.
+    *   Visual identity: `Dna` icon with a `rose` accent color (`#f43f5e`), contrasting with Physics (cyan), Chemistry (emerald), and Mathematics (amber).
+    *   Chapter: **Plant Physiology** (`plant-physiology`), introducing biochemical kinetics, Blackman's Law of Limiting Factors (1905), and saturation thresholds.
+*   **Mission: "The Law of Limiting Factors" (`photosynthesis-rate`):**
+    *   **Narrative World:** Eden-4 Orbital Phytotron & Biosphere Lab with a warm growth-lamp emerald atmosphere and mist-laden hydroponic beds.
+    *   **Predict Phase:** Custom prediction presets targeting photosynthetic misconceptions:
+        *   `rate-increases-forever` (Unlimited Light Acceleration Fallacy: assuming more light indefinitely raises rate).
+        *   `rate-plateaus-temperature` (Single-Variable Dominance Fallacy: assuming temperature alone sets ceiling).
+        *   `rate-plateaus-co2` (Correct formulation of Blackman's Law: linear at low light, then plateaus as CO₂ fixation limits the pace).
+    *   **Experiment Phase:** Powered by `PARAMETER_SANDBOX` with `RATE_LIMITED` relationship: $\text{Rate} = \frac{50.0 \cdot I}{I + 100.0}$. Light intensity slider ($I$) drives net oxygen output into target band $[42.0, 46.0]\ \mu\text{mol O}_2/\text{m}^2/\text{s}$. Multi-run trial markers plot historical sweeps to demonstrate diminishing marginal returns.
+    *   **Reflect Phase:** Pedagogical confrontation highlighting that multi-step physiological processes are governed by the scarcest reagent rather than the sum of favorable conditions. Unlocks discoveries: **"The Law of Limiting Factors"** and **"Light Saturation Point (LSP)"**.
+    *   **Socratic Voice:** Dr. Richard Feynman leading the pedagogical dialogue with an intuitive automotive assembly line metaphor (wheel installers vs. engine delivery trucks).
+*   **Constellation Map & Legend Update (`src/components/layout/ConstellationMap.tsx`):**
+    *   Added `"plant-physiology"` to `BUILT_CHAPTER_IDS`.
+    *   Added `rose` color scheme definition with vibrant rose glow and badges.
+    *   Promoted Biology from "Standby / Coming Online" to "Active Laboratories" in the constellation legend bar.
+*   **Curriculum Registry Integration (`src/content/registry.ts`):**
+    *   Registered `biologyClass11Curriculum` in `curriculumRegistry`.
+
+---
+
 ## [1.4.0] - 2026-09-12
 ### Phase 3: Mathematics Curriculum Pack & "The Vanishing Secant"
 

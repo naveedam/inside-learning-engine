@@ -11,6 +11,7 @@ import { chemistryClass11Curriculum } from "./chemistry_class_11/stoichiometry";
 import { historyClass11Curriculum } from "./history_class_11/french_revolution";
 import { literatureClass11Curriculum } from "./literature_class_11/frankenstein";
 import { mathematicsClass11Curriculum } from "./mathematics_class_11/limits_and_derivatives";
+import { biologyClass11Curriculum } from "./biology_class_11/plant_physiology";
 
 // Inject Newton's Laws as Expedition 02
 if (!physicsClass11Curriculum.chapters.some(ch => ch.id === "newtons-laws")) {
@@ -26,6 +27,7 @@ export const curriculumRegistry: Record<string, CurriculumPack> = {
   "physics-class-11": physicsClass11Curriculum,
   "mathematics-class-11": mathematicsClass11Curriculum,
   "chemistry-class-11": chemistryClass11Curriculum,
+  "biology-class-11": biologyClass11Curriculum,
   "history-class-11": historyClass11Curriculum,
   "literature-class-11": literatureClass11Curriculum
 };
