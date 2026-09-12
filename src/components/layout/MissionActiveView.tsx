@@ -9,9 +9,10 @@ import { getAllCurriculumPacks } from "../../content/registry";
 import { 
   MessageSquare, RefreshCw, Send, ChevronLeft, Award, HelpCircle, 
   ShieldAlert, CheckCircle, Play, ChevronRight, Compass, Atom, 
-  Beaker, BookOpen, Sparkles, LogIn 
+  Beaker, BookOpen, Sparkles, LogIn, ArrowRight 
 } from "lucide-react";
 import { globalEventBus } from "../../core/EventBus";
+import MentorPortrait from "../ui/MentorPortrait";
 
 export default function MissionActiveView() {
   const {
@@ -107,6 +108,9 @@ export default function MissionActiveView() {
   const [aiInput, setAiInput] = useState("");
   const [chatLog, setChatLog] = useState<Array<{ sender: "USER" | "MENTOR"; text: string }>>([]);
 
+  // Mobile / Tablet Cockpit tab switcher ("SIMULATION" | "CONTROLS" | "MENTOR")
+  const [cockpitMobileTab, setCockpitMobileTab] = useState<"SIMULATION" | "CONTROLS" | "MENTOR">("SIMULATION");
+
   // Initialize mentor details based on active subject
   useEffect(() => {
     if (mission) {
@@ -124,12 +128,12 @@ export default function MissionActiveView() {
   }, [mission]);
 
   // Mentor profile switcher info
-  const mentorsInfo: Record<string, { name: string; title: string; emoji: string }> = {
-    GALILEO: { name: "Galileo Galilei", title: "Observational Astronomer", emoji: "🔭" },
-    NEWTON: { name: "Sir Isaac Newton", title: "Mathematical Physicist", emoji: "🍎" },
-    FEYNMAN: { name: "Dr. Richard Feynman", title: "Quantum Educator", emoji: "🥁" },
-    CURIE: { name: "Marie Curie", title: "Nuclear Chemist", emoji: "🧪" },
-    SYSTEM: { name: "Hypatia of Alexandria", title: "System Dynamics Observer", emoji: "🏛️" }
+  const mentorsInfo: Record<string, { name: string; title: string; discipline: string }> = {
+    GALILEO: { name: "Galileo Galilei", title: "Observational Astronomer", discipline: "Classical Mechanics" },
+    NEWTON: { name: "Sir Isaac Newton", title: "Mathematical Physicist", discipline: "Gravitation & Optics" },
+    FEYNMAN: { name: "Dr. Richard Feynman", title: "Quantum Educator", discipline: "Thermodynamics & Electrodynamics" },
+    CURIE: { name: "Marie Curie", title: "Nuclear Chemist", discipline: "Atomic Physics & Radiochemistry" },
+    SYSTEM: { name: "Hypatia of Alexandria", title: "System Dynamics Observer", discipline: "Mathematical Astronomy" }
   };
 
   const handleMentorChange = (avatarId: string) => {
@@ -1838,15 +1842,16 @@ export default function MissionActiveView() {
     <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 relative flex flex-col gap-6">
       
       {/* 1. Header Navigation HUD Rail */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+      <div className="flex items-center justify-between border-b border-white/5 pb-4 gap-2">
         <button
           onClick={() => {
             setView("mission-details");
             globalEventBus.publish({ type: "UI_SOUND_TRIGGER", payload: { cue: "CLICK" } });
           }}
-          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] font-mono text-gray-400 hover:text-white border border-white/5 transition-all flex items-center gap-1.5 active:scale-95"
+          className="px-3.5 py-2.5 min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-400 hover:text-white border border-white/5 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
         >
-          <ChevronLeft size={12} /> ABORT TO MISSION PROFILE
+          <ChevronLeft size={14} />
+          <span className="hidden xs:inline">ABORT TO</span> MISSION PROFILE
         </button>
 
         {/* Mission Step/Lifecycle Segment Progress Indicator */}
@@ -1867,8 +1872,13 @@ export default function MissionActiveView() {
           ))}
         </div>
 
+        {/* Mobile Step Badge */}
+        <div className="md:hidden font-mono text-[10px] text-cyan-400 bg-cyan-950/40 border border-cyan-500/20 px-2.5 py-1 rounded-lg">
+          STEP {activeStepIndex + 1}/{mission.steps.length}: {mission.steps[activeStepIndex]?.type}
+        </div>
+
         {/* Mission Level indicator */}
-        <div className="font-mono text-[9px] text-gray-400 bg-gray-950/60 px-3 py-1.5 border border-white/5 rounded-xl flex items-center gap-2">
+        <div className="font-mono text-[9px] text-gray-400 bg-gray-950/60 px-3 py-1.5 border border-white/5 rounded-xl hidden sm:flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
           <span>SYS STATE: ACTIVE</span>
         </div>
@@ -1880,8 +1890,8 @@ export default function MissionActiveView() {
         if (mission.steps[activeStepIndex]?.type === "BRIEFING") {
           const briefing = mission.steps[activeStepIndex];
           return (
-            <div className="flex-1 max-w-3xl mx-auto w-full py-8 flex flex-col gap-6 animate-in fade-in duration-300">
-              <div className="p-8 rounded-3xl border border-white/10 bg-gray-950/50 backdrop-blur-xl relative overflow-hidden flex flex-col gap-6">
+            <div className="flex-1 max-w-3xl mx-auto w-full py-6 sm:py-8 flex flex-col gap-6 animate-in fade-in duration-300">
+              <div className="p-6 sm:p-8 rounded-3xl border border-white/10 bg-gray-950/50 backdrop-blur-xl relative overflow-hidden flex flex-col gap-6">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/[0.02] blur-3xl" />
                 
                 <div className="flex flex-col gap-1 border-b border-white/5 pb-4">
@@ -1898,7 +1908,7 @@ export default function MissionActiveView() {
                 </div>
 
                 {/* Checklist learning target blocks */}
-                <div className="p-5 rounded-2xl border border-white/5 bg-black/35 font-mono text-xs text-gray-400 flex flex-col gap-3">
+                <div className="p-4 sm:p-5 rounded-2xl border border-white/5 bg-black/35 font-mono text-xs text-gray-400 flex flex-col gap-3">
                   <span className="text-white text-[10px] font-bold tracking-wider uppercase">Active Learning Targets:</span>
                   {mission.learningObjectives.map((obj, i) => (
                     <div key={i} className="flex items-start gap-2.5">
@@ -1910,7 +1920,7 @@ export default function MissionActiveView() {
 
                 <button
                   onClick={() => nextStep(mission.steps.length)}
-                  className="w-full mt-2 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                  className="w-full mt-2 py-3 min-h-[44px] rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] cursor-pointer"
                 >
                   ESTABLISH COMMUNICATIONS LINK <ChevronRight size={14} />
                 </button>
@@ -1923,8 +1933,8 @@ export default function MissionActiveView() {
         if (mission.steps[activeStepIndex]?.type === "DIALOGUE") {
           const dialStep = mission.steps[activeStepIndex];
           return (
-            <div className="flex-1 max-w-2xl mx-auto w-full py-8 flex flex-col gap-6 animate-in fade-in duration-300">
-              <div className="p-8 rounded-3xl border border-white/10 bg-gray-950/60 backdrop-blur-xl relative flex flex-col gap-6">
+            <div className="flex-1 max-w-2xl mx-auto w-full py-6 sm:py-8 flex flex-col gap-6 animate-in fade-in duration-300">
+              <div className="p-6 sm:p-8 rounded-3xl border border-white/10 bg-gray-950/60 backdrop-blur-xl relative flex flex-col gap-6">
                 <div className="flex flex-col gap-1 border-b border-white/5 pb-4">
                   <span className="font-mono text-[9px] text-cyan-400 font-bold tracking-widest uppercase">
                     Socratic Uplink Established
@@ -1937,11 +1947,9 @@ export default function MissionActiveView() {
                 <div className="flex flex-col gap-5">
                   {dialStep.content.dialogue?.map((seg, i) => (
                     <div key={i} className="flex gap-4 items-start p-4 rounded-2xl border border-white/5 bg-white/[0.01]">
-                      <div className="w-10 h-10 rounded-xl bg-gray-950 border border-white/10 flex items-center justify-center text-lg shrink-0 shadow-inner">
-                        {seg.avatar === "GALILEO" ? "🔭" : seg.avatar === "NEWTON" ? "🍎" : seg.avatar === "FEYNMAN" ? "🥁" : seg.avatar === "CURIE" ? "🧪" : "🏛️"}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-mono text-[9px] text-cyan-400 font-bold">{seg.speaker}</span>
+                      <MentorPortrait mentorId={seg.avatar} size={48} className="shrink-0" />
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="font-mono text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{seg.speaker}</span>
                         <p className="text-gray-300 font-mono text-xs leading-relaxed">{seg.message}</p>
                       </div>
                     </div>
@@ -1950,7 +1958,7 @@ export default function MissionActiveView() {
 
                 <button
                   onClick={() => nextStep(mission.steps.length)}
-                  className="w-full mt-4 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                  className="w-full mt-4 py-3 min-h-[44px] rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] cursor-pointer"
                 >
                   INITIALIZE PILOT SANDBOX <ChevronRight size={14} />
                 </button>
@@ -1963,10 +1971,58 @@ export default function MissionActiveView() {
         const isChallenge = mission.steps[activeStepIndex]?.type === "CHALLENGE_EXPERIMENT";
         
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch flex-1 min-h-0">
-            
-            {/* Left Control Column (Col 1): PREDICT -> EXPERIMENT -> REFLECT Deck */}
-            <div className="lg:col-span-1 flex flex-col gap-5">
+          <div className="flex flex-col flex-1 min-h-0 gap-4">
+            {/* Mobile & Tablet Cockpit Tab Switcher (<lg) */}
+            <div className="lg:hidden flex items-center p-1.5 rounded-2xl bg-gray-950/80 border border-white/10 backdrop-blur-xl gap-1.5 shadow-lg">
+              <button
+                type="button"
+                onClick={() => setCockpitMobileTab("SIMULATION")}
+                className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  cockpitMobileTab === "SIMULATION"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                <Play size={13} fill="currentColor" />
+                <span>SIMULATION</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCockpitMobileTab("CONTROLS")}
+                className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  cockpitMobileTab === "CONTROLS"
+                    ? "bg-orange-500/20 text-orange-300 border border-orange-500/30 shadow-sm"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                <Compass size={13} />
+                <span>CONTROLS</span>
+                {!isChallenge && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300 font-mono">
+                    {cognitiveLoopState}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCockpitMobileTab("MENTOR")}
+                className={`flex-1 py-2.5 min-h-[44px] rounded-xl font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  cockpitMobileTab === "MENTOR"
+                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                <MentorPortrait mentorId={selectedMentor} size={18} glow={false} showReticle={false} />
+                <span>MENTOR</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch flex-1 min-h-0">
+              
+              {/* Left Control Column (Col 1): PREDICT -> EXPERIMENT -> REFLECT Deck */}
+              <div className={`flex-col gap-5 ${cockpitMobileTab === "CONTROLS" ? "flex" : "hidden"} lg:flex lg:col-span-1`}>
               
               {/* IF IN SANDBOX: COGNITIVE LOOP PANEL */}
               {!isChallenge ? (
@@ -2634,32 +2690,34 @@ export default function MissionActiveView() {
             </div>
 
             {/* Center Canvas Stage (Col 2 & 3): Displays Interactive Physics Sandbox & Replays */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
+            <div className={`flex-col gap-4 ${cockpitMobileTab === "SIMULATION" ? "flex" : "hidden"} lg:flex lg:col-span-2`}>
               
               {/* Dynamic Simulated Interactive Window Container */}
-              <div className="relative w-full aspect-video rounded-3xl border border-white/10 bg-gray-950 overflow-hidden shadow-2xl flex flex-col">
+              <div className="relative w-full rounded-2xl sm:rounded-3xl border border-white/10 bg-gray-950 overflow-hidden shadow-2xl flex flex-col">
                 
                 {/* Header indicators */}
                 <div className="p-3 border-b border-white/5 bg-gray-950/80 flex items-center justify-between font-mono text-[9px] text-gray-400 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                    <span>COCKPIT RESOLVED: {mission.world.environmentName}</span>
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                    <span className="truncate">COCKPIT RESOLVED: {mission.world.environmentName}</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="hidden sm:flex items-center gap-4 shrink-0">
                     <span>ATMOSPHERE: {mission.world.visualAtmosphere}</span>
                   </div>
                 </div>
 
-                {/* HTML5 Canvas Element */}
-                <canvas
-                  ref={canvasRef}
-                  width={520}
-                  height={280}
-                  className="flex-1 w-full bg-gray-950 relative cursor-crosshair"
-                />
+                {/* HTML5 Canvas Element with responsive scaling */}
+                <div className="relative w-full aspect-[520/280] min-h-[200px] max-h-[440px] bg-gray-950 flex items-center justify-center">
+                  <canvas
+                    ref={canvasRef}
+                    width={520}
+                    height={280}
+                    className="w-full h-full object-contain bg-gray-950 relative cursor-crosshair block"
+                  />
+                </div>
 
                 {/* Vector Slider Controls Panel */}
-                <div className="p-4 border-t border-white/10 bg-gray-950/80 backdrop-blur-md flex flex-col gap-3 z-10">
+                <div className="p-4 border-t border-white/10 bg-gray-950/90 backdrop-blur-md flex flex-col gap-3 z-10">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {mission.experimentFlow.parameters.map((p) => (
                       <div key={p.name} className="flex flex-col gap-1.5">
@@ -2678,10 +2736,49 @@ export default function MissionActiveView() {
                             const val = parseFloat(e.target.value);
                             setSimParameters((prev) => ({ ...prev, [p.name]: val }));
                           }}
-                          className="accent-cyan-400 h-1 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40"
+                          className="accent-cyan-400 h-2 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40 w-full py-1.5"
                         />
                       </div>
                     ))}
+                  </div>
+
+                  {/* Quick Action Button for Mobile/Tablet in Simulation View */}
+                  <div className="lg:hidden pt-2 border-t border-white/5 flex items-center justify-between gap-3">
+                    {isChallenge ? (
+                      <button
+                        onClick={runSimulation}
+                        disabled={simProgress >= 0}
+                        className="w-full py-3 min-h-[44px] rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(249,115,22,0.2)] disabled:opacity-45 cursor-pointer"
+                      >
+                        <Play size={13} fill="currentColor" className={simProgress >= 0 ? "animate-pulse" : ""} />
+                        {simProgress >= 0 ? "SIMULATION ACTIVE..." : "LAUNCH DEPLOYMENT"}
+                      </button>
+                    ) : cognitiveLoopState === "EXPERIMENT" ? (
+                      <button
+                        onClick={runSimulation}
+                        disabled={simProgress >= 0}
+                        className="w-full py-3 min-h-[44px] rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] disabled:opacity-45 cursor-pointer"
+                      >
+                        <Play size={13} fill="currentColor" className={simProgress >= 0 ? "animate-pulse" : ""} />
+                        {simProgress >= 0 ? "SIMULATION ACTIVE..." : "RUN EXPERIMENT"}
+                      </button>
+                    ) : cognitiveLoopState === "PREDICT" ? (
+                      <button
+                        onClick={() => setCockpitMobileTab("CONTROLS")}
+                        className="w-full py-2.5 min-h-[44px] rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 font-mono text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>RECORD PREDICTION IN CONTROLS</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setCockpitMobileTab("CONTROLS")}
+                        className="w-full py-2.5 min-h-[44px] rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-mono text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>RECORD REFLECTION IN CONTROLS</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2690,10 +2787,10 @@ export default function MissionActiveView() {
               <div className="p-4 rounded-2xl border border-white/5 bg-gray-950/30 font-mono text-xs flex flex-col gap-2 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-500 via-cyan-500 to-purple-500" />
                 <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest">Scientific Insight Formula Relationship</span>
-                <div className="p-3 rounded bg-black/60 border border-white/5 text-center text-cyan-300 font-mono text-xs sm:text-sm shadow-inner">
+                <div className="p-3 rounded bg-black/60 border border-white/5 text-center text-cyan-300 font-mono text-xs sm:text-sm shadow-inner select-text">
                   {mission.coreScientificConcept.equationLatex || "y = f(x)"}
                 </div>
-                <p className="text-[10px] text-gray-500 leading-normal">
+                <p className="text-[10px] text-gray-400 leading-relaxed">
                   {mission.coreScientificConcept.description}
                 </p>
               </div>
@@ -2701,23 +2798,40 @@ export default function MissionActiveView() {
             </div>
 
             {/* Right Side (Col 4): Socratic AI Mentor Station */}
-            <div className="lg:col-span-1 flex flex-col h-[480px] lg:h-auto rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl overflow-hidden shadow-lg">
+            <div className={`flex-col h-[520px] lg:h-auto rounded-2xl border border-white/10 bg-gray-950/70 backdrop-blur-xl overflow-hidden shadow-lg ${cockpitMobileTab === "MENTOR" ? "flex" : "hidden"} lg:flex lg:col-span-1`}>
               
-              {/* AI Station Header with dropdown switcher */}
-              <div className="p-4 border-b border-white/10 bg-gray-950 flex flex-col gap-2">
-                <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest">
-                  SOCRATIC AI COMPANION
-                </span>
+              {/* AI Station Header with Mentor Portrait & dropdown switcher */}
+              <div className="p-4 border-b border-white/10 bg-gray-950 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    SOCRATIC AI COMPANION
+                  </span>
+                  <span className="font-mono text-[9px] text-gray-500">UPLINK ACTIVE</span>
+                </div>
+
+                <div className="flex items-center gap-3 p-2.5 rounded-xl border border-white/5 bg-white/[0.02]">
+                  <MentorPortrait mentorId={selectedMentor} size={42} className="shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display font-bold text-white text-sm truncate">
+                      {mentorsInfo[selectedMentor]?.name}
+                    </div>
+                    <div className="font-mono text-[10px] text-gray-400 truncate">
+                      {mentorsInfo[selectedMentor]?.title}
+                    </div>
+                  </div>
+                </div>
 
                 <div className="flex items-center gap-2">
+                  <span className="font-mono text-[9px] text-gray-500 uppercase tracking-wider shrink-0">GUIDE:</span>
                   <select
                     value={selectedMentor}
                     onChange={(e) => handleMentorChange(e.target.value)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white font-mono focus:outline-none focus:border-cyan-500/30 cursor-pointer w-full"
+                    className="bg-gray-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-500/30 cursor-pointer w-full"
                   >
                     {mission.socraticMentorDialogue.map((m) => (
                       <option key={m.avatar} value={m.avatar}>
-                        {m.character} ({mentorsInfo[m.avatar]?.emoji || "🎓"})
+                        {m.character} — {mentorsInfo[m.avatar]?.discipline || "Investigator"}
                       </option>
                     ))}
                   </select>
@@ -2729,22 +2843,32 @@ export default function MissionActiveView() {
                 {chatLog.map((chat, idx) => (
                   <div
                     key={idx}
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs flex flex-col gap-1 ${
+                    className={`max-w-[90%] rounded-2xl p-3 text-xs flex gap-2.5 ${
                       chat.sender === "USER"
-                        ? "self-end bg-cyan-600/20 text-cyan-100 rounded-br-none border border-cyan-500/10"
+                        ? "self-end bg-cyan-600/20 text-cyan-100 rounded-br-none border border-cyan-500/10 flex-row-reverse"
                         : "self-start bg-white/5 text-gray-200 rounded-bl-none border border-white/5"
                     }`}
                   >
-                    <span className="font-mono text-[8px] text-gray-400 font-bold tracking-wider">
-                      {chat.sender === "USER" ? "Astronaut Cadet" : mentorsInfo[selectedMentor]?.name}
-                    </span>
-                    <p className="leading-relaxed whitespace-pre-wrap">{chat.text}</p>
+                    {chat.sender === "MENTOR" ? (
+                      <MentorPortrait mentorId={selectedMentor} size={28} glow={false} showReticle={false} className="shrink-0 mt-0.5" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-[10px] font-mono text-cyan-300 shrink-0 mt-0.5 font-bold">
+                        CADET
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="font-mono text-[8px] text-gray-400 font-bold tracking-wider">
+                        {chat.sender === "USER" ? "Astronaut Cadet" : mentorsInfo[selectedMentor]?.name}
+                      </span>
+                      <p className="leading-relaxed whitespace-pre-wrap text-xs">{chat.text}</p>
+                    </div>
                   </div>
                 ))}
 
                 {isAiThinking && (
-                  <div className="self-start max-w-[85%] rounded-2xl rounded-bl-none px-4 py-2.5 text-xs bg-white/5 border border-white/5 text-gray-500 font-mono animate-pulse">
-                    Uplinking telemetry to Socratic guide...
+                  <div className="self-start max-w-[90%] rounded-2xl rounded-bl-none p-3 text-xs bg-white/5 border border-white/5 text-gray-400 font-mono flex items-center gap-2.5 animate-pulse">
+                    <MentorPortrait mentorId={selectedMentor} size={24} glow={false} showReticle={false} className="shrink-0" />
+                    <span>Uplinking telemetry to Socratic guide...</span>
                   </div>
                 )}
 
@@ -2753,16 +2877,16 @@ export default function MissionActiveView() {
 
               {/* SOCRATIC PRESETS DECK */}
               {mission.guidedInquiries && mission.guidedInquiries.length > 0 && (
-                <div className="px-3 py-2 border-t border-white/10 bg-gray-950/60 flex flex-col gap-1.5">
+                <div className="px-3 py-2.5 border-t border-white/10 bg-gray-950/60 flex flex-col gap-1.5">
                   <span className="font-mono text-[8px] text-cyan-400 font-bold uppercase tracking-wider">GUIDED INQUIRIES:</span>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1.5">
                     {mission.guidedInquiries.map((p, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => handlePresetClick(p.text)}
                         disabled={isAiThinking}
-                        className="w-full text-left font-mono text-[9px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2 py-1 rounded transition-all active:scale-98 truncate cursor-pointer"
+                        className="w-full text-left font-mono text-[10px] text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/5 border border-white/5 hover:border-cyan-500/20 px-2.5 py-2 min-h-[38px] rounded-lg transition-all active:scale-98 truncate cursor-pointer"
                       >
                         {p.label}
                       </button>
@@ -2772,10 +2896,10 @@ export default function MissionActiveView() {
               )}
 
               {/* Chat input form */}
-              <form onSubmit={handleAskMentor} className="p-3 border-t border-white/10 bg-gray-950 flex items-center gap-1.5">
+              <form onSubmit={handleAskMentor} className="p-3 border-t border-white/10 bg-gray-950 flex items-center gap-2">
                 <input
                   type="text"
-                  className="flex-1 bg-white/5 border border-white/5 hover:border-white/15 focus:border-cyan-500/25 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-0 transition-colors"
+                  className="flex-1 bg-white/5 border border-white/5 hover:border-white/15 focus:border-cyan-500/25 rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-0 transition-colors font-mono"
                   placeholder={`Ask ${mentorsInfo[selectedMentor]?.name}...`}
                   value={aiInput}
                   onChange={(e) => setAiInput(e.target.value)}
@@ -2783,13 +2907,15 @@ export default function MissionActiveView() {
                 <button
                   type="submit"
                   disabled={!aiInput.trim() || isAiThinking}
-                  className="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="p-2.5 min-h-[44px] min-w-[44px] rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                  title="Send message"
                 >
-                  <Send size={14} />
+                  <Send size={15} />
                 </button>
               </form>
             </div>
 
+            </div>
           </div>
         );
       })()}

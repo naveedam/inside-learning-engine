@@ -262,32 +262,32 @@ const chemistryRoadmapChapters: Chapter[] = [
     missions: []
   },
   {
-    id: "organic-chemistry-foundations",
-    title: "Organic Chemistry: Carbon Frameworks & Hydrocarbons",
-    shortDescription: "IUPAC nomenclature, inductive/resonance electronic effects, reaction mechanisms, alkanes, alkenes, alkynes.",
-    longDescription: "Synthesize synthetic biopolymers and hydrocarbon fuels. Map nucleophilic and electrophilic reaction pathways through carbocation intermediates.",
+    id: "organic-chemistry-basics",
+    title: "Organic Chemistry: Carbon Frameworks & Reaction Mechanisms",
+    shortDescription: "IUPAC nomenclature, electronic displacements (inductive, electromeric, resonance, hyperconjugation), and reactive intermediates.",
+    longDescription: "Map organic reaction pathways and analyze electron displacements through carbocation, carbanion, and free-radical intermediates.",
     difficulty: "Advanced",
-    estimatedMinutes: 35,
+    estimatedMinutes: 30,
     constellationPosition: { x: 60, y: 35 },
     curricularRequirements: [
-      "Classification and IUPAC nomenclature of organic compounds, electronic displacements: inductive, electromeric, resonance.",
-      "Homolytic and heterolytic fission of a covalent bond: free radicals, carbocations, carbanions, electrophiles and nucleophiles.",
-      "Alkanes, alkenes, alkynes: nomenclature, structure of double/triple bond, geometrical isomerism, electrophilic addition mechanisms."
+      "Classification and IUPAC nomenclature of organic compounds, structural and stereoisomerism.",
+      "Electronic displacements: inductive effect, electromeric effect, resonance and hyperconjugation.",
+      "Homolytic and heterolytic fission, reactive intermediates: carbocations, carbanions, free radicals, electrophiles and nucleophiles."
     ],
     missions: []
   },
   {
-    id: "environmental-chemistry",
-    title: "Environmental Chemistry: Atmospheric & Biosphere Cycles",
-    shortDescription: "Photochemical smog, ozone depletion, greenhouse effect, and green chemical synthesis.",
-    longDescription: "Monitor terraforming biospheres and planet-scale greenhouse balances. Neutralize stratospheric chlorine radicals to preserve artificial ozone canopies.",
-    difficulty: "Beginner",
-    estimatedMinutes: 15,
-    constellationPosition: { x: 45, y: 40 },
+    id: "hydrocarbons",
+    title: "Hydrocarbons: Alkanes, Alkenes, Alkynes & Aromatic Systems",
+    shortDescription: "Conformations of ethane, Markovnikov addition, ozonolysis, and electrophilic aromatic substitution.",
+    longDescription: "Synthesize high-energy hydrocarbon fuels and aromatic polymers for planetary rover components.",
+    difficulty: "Advanced",
+    estimatedMinutes: 30,
+    constellationPosition: { x: 50, y: 45 },
     curricularRequirements: [
-      "Environmental pollution - air, water and soil pollution, chemical reactions in atmosphere, photochemical smog.",
-      "Acid rain, ozone and its reactions, mechanisms of depletion of stratospheric ozone layer.",
-      "Greenhouse effect and global warming, green chemistry strategies for pollution prevention."
+      "Alkanes: nomenclature, conformations of ethane, physical properties, chemical reactions including free radical halogenation.",
+      "Alkenes and Alkynes: structure of double and triple bonds, geometrical isomerism, electrophilic addition mechanisms, Markovnikov's rule.",
+      "Aromatic hydrocarbons: benzene structure, resonance, aromaticity (Huckel's rule), electrophilic substitution mechanisms."
     ],
     missions: []
   }
@@ -510,64 +510,261 @@ for (const ch of mathematicsRoadmapChapters) {
   }
 }
 
-// Full ISC Class XI Biology Roadmap Chapters
+// Full ISC Class XI Biology Roadmap Chapters (18 additional placeholder chapters)
 const biologyRoadmapChapters: Chapter[] = [
   {
-    id: "diversity-of-living-organisms",
-    title: "Diversity of Living Organisms: Taxonomy & Classification",
-    shortDescription: "Five kingdom classification, biological nomenclature, plant & animal kingdom phyla.",
-    longDescription: "Taxonomically index alien flora and extremophiles discovered on subsurface oceans. Apply Whittaker's five-kingdom classification criteria.",
+    id: "the-living-world",
+    title: "The Living World: Biodiversity & Taxonomy",
+    shortDescription: "Biodiversity, taxonomical hierarchy, binomial nomenclature, and herbarium/zoological park systems.",
+    longDescription: "Establish initial classification criteria for extremophilic planetary specimens using universal binomial nomenclature.",
     difficulty: "Beginner",
-    estimatedMinutes: 25,
-    constellationPosition: { x: 25, y: 80 },
+    estimatedMinutes: 20,
+    constellationPosition: { x: 15, y: 70 },
     curricularRequirements: [
-      "Biodiversity, taxonomy & systematics, concept of species and taxonomical hierarchy, binomial nomenclature.",
-      "Five kingdom classification: Monera, Protista, Fungi, Plantae, Animalia; salient features and classification."
+      "What is living? Biodiversity, need for classification, three domains of life.",
+      "Taxonomy & Systematics, concept of species and taxonomical hierarchy, binomial nomenclature.",
+      "Tools for study of taxonomy: museums, zoological parks, herbaria, and botanical gardens."
     ],
     missions: []
   },
   {
-    id: "structural-organisation",
-    title: "Structural Organisation: Tissues & Organ Systems",
-    shortDescription: "Morphology, anatomy, plant tissues (meristematic/permanent), and animal epithelial/connective tissues.",
-    longDescription: "Analyze cellular architecture and vascular bundles of hydroponic crops engineered for extreme lunar gravity.",
+    id: "biological-classification",
+    title: "Biological Classification: Five Kingdom Systems",
+    shortDescription: "Monera, Protista, Fungi, Lichens, Viruses, and Viroids classification criteria.",
+    longDescription: "Classify primitive unicellular organisms isolated from geothermal deep vents into kingdom taxa.",
     difficulty: "Intermediate",
     estimatedMinutes: 25,
-    constellationPosition: { x: 40, y: 75 },
+    constellationPosition: { x: 22, y: 75 },
     curricularRequirements: [
-      "Morphology and modifications of roots, stems, leaves, inflorescence, flower, fruit and seed.",
-      "Anatomy and functions of different tissues and tissue systems in plants.",
-      "Animal tissues: morphology, anatomy and functions of different systems in representative organisms."
+      "Five kingdom classification; salient features and classification of Monera, Protista and Fungi into major groups.",
+      "Lichens, Viruses, Viroids and Prions: structural organization and biological nature."
     ],
     missions: []
   },
   {
-    id: "cell-structure-function",
-    title: "Cell: The Unit of Life, Biomolecules & Cell Division",
-    shortDescription: "Prokaryotic/eukaryotic structure, organelles, enzymes, biomolecules, and mitosis/meiosis cycles.",
-    longDescription: "Calibrate confocal electron microscopes on cellular membranes, peptide polymers, and chromatin division dynamics.",
+    id: "plant-kingdom",
+    title: "Plant Kingdom: Cryptogams & Phanerogams",
+    shortDescription: "Algae, Bryophytes, Pteridophytes, Gymnosperms, and Angiosperms life cycles.",
+    longDescription: "Map evolutionary transitions in alternation of generations and vascularization across aquatic and terrestrial flora.",
     difficulty: "Intermediate",
-    estimatedMinutes: 30,
-    constellationPosition: { x: 55, y: 80 },
+    estimatedMinutes: 25,
+    constellationPosition: { x: 30, y: 72 },
     curricularRequirements: [
-      "Cell theory, structure of prokaryotic and eukaryotic cells, plant and animal cells, endomembrane system, organelles.",
-      "Biomolecules: chemical constituents of living cells: proteins, carbohydrates, lipids, nucleic acids; enzymes.",
-      "Cell cycle, mitosis, meiosis and their significance in genetic variation."
+      "Salient features and classification of plants into major groups: Algae, Bryophytes, Pteridophytes, Gymnosperms.",
+      "Angiosperms: classification up to class, characteristic features and examples.",
+      "Plant life cycles and alternation of generations."
     ],
     missions: []
   },
   {
-    id: "human-physiology",
-    title: "Human Physiology: Organ Systems & Homeostasis",
-    shortDescription: "Breathing & gas exchange, body fluids & circulation, neural control, and chemical coordination.",
-    longDescription: "Monitor crew vital biometrics in zero-g environments. Track pulmonary alveolar gas exchanges, cardiac action potentials, and homeostatic hormonal feedback.",
+    id: "animal-kingdom",
+    title: "Animal Kingdom: Non-Chordates & Chordates",
+    shortDescription: "Levels of organisation, symmetry, coelom, and phylum characteristics from Porifera to Mammalia.",
+    longDescription: "Survey morphological adaptations and coelomic architecture across non-chordate and chordate phyla.",
     difficulty: "Advanced",
-    estimatedMinutes: 35,
-    constellationPosition: { x: 75, y: 85 },
+    estimatedMinutes: 30,
+    constellationPosition: { x: 36, y: 80 },
     curricularRequirements: [
-      "Breathing and Respiration: exchange of gases, transport of gases and regulation of respiration.",
-      "Body fluids and circulation: composition of blood, blood groups, human circulatory system, ECG.",
-      "Excretory products and their elimination; Locomotion and movement; Neural control and coordination; Chemical coordination and regulation."
+      "Basis of classification: levels of organisation, symmetry, diploblastic and triploblastic organisation, coelom.",
+      "Salient features and classification of non-chordates up to phyla level and chordates up to class level."
+    ],
+    missions: []
+  },
+  {
+    id: "morphology-flowering-plants",
+    title: "Morphology of Flowering Plants: Floral Architecture",
+    shortDescription: "Root, stem, leaf modifications, inflorescence, flower anatomy, and family descriptions.",
+    longDescription: "Examine anatomical adaptations of angiosperms engineered for hydroponic food modules.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 20,
+    constellationPosition: { x: 44, y: 76 },
+    curricularRequirements: [
+      "Morphology and modifications of root, stem, leaf, inflorescence: racemose and cymose.",
+      "Flower, fruit and seed; description of representative angiospermic families."
+    ],
+    missions: []
+  },
+  {
+    id: "anatomy-flowering-plants",
+    title: "Anatomy of Flowering Plants: Tissues & Meristems",
+    shortDescription: "Meristematic & permanent tissues, tissue systems, and internal structure of dicot/monocot organs.",
+    longDescription: "Cross-section plant stems to resolve vascular cambium function and secondary xylem growth rings.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 25,
+    constellationPosition: { x: 50, y: 72 },
+    curricularRequirements: [
+      "Anatomy and functions of tissue systems in dicots and monocots.",
+      "Internal structure of root, stem, and leaf; secondary growth in dicot stem and root."
+    ],
+    missions: []
+  },
+  {
+    id: "structural-organisation-animals",
+    title: "Structural Organisation in Animals: Tissues & Systems",
+    shortDescription: "Epithelial, connective, muscular, and nervous tissues, plus organ system morphology.",
+    longDescription: "Analyze cellular junctions, collagen matrices, and myofibril alignments in animal tissues.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 20,
+    constellationPosition: { x: 56, y: 78 },
+    curricularRequirements: [
+      "Animal tissues: epithelial, connective, muscular, and nervous tissues.",
+      "Morphology, anatomy and functions of different systems (digestive, circulatory, respiratory, nervous and reproductive) of representative organisms."
+    ],
+    missions: []
+  },
+  {
+    id: "cell-the-unit-of-life",
+    title: "Cell: The Unit of Life: Organelles & Membranes",
+    shortDescription: "Fluid mosaic model, endomembrane system, mitochondria, chloroplasts, and cytoskeleton.",
+    longDescription: "Probe lipid bilayers and active transport pumps using virtual nanoscale scanning probes.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 25,
+    constellationPosition: { x: 62, y: 70 },
+    curricularRequirements: [
+      "Cell theory and cell as basic unit of life, structure of prokaryotic and eukaryotic cells.",
+      "Plant cell and animal cell, cell envelope, cell membrane, cell wall, cell organelles: structure and function."
+    ],
+    missions: []
+  },
+  {
+    id: "biomolecules",
+    title: "Biomolecules: Proteins, Carbohydrates, Lipids & Enzymes",
+    shortDescription: "Amino acids, peptide bonds, nucleic acid polymers, and enzyme kinetics (Michaelis-Menten dynamics).",
+    longDescription: "Synthesize synthetic peptide catalysts and measure activation energy reductions across temperature curves.",
+    difficulty: "Advanced",
+    estimatedMinutes: 30,
+    constellationPosition: { x: 68, y: 75 },
+    curricularRequirements: [
+      "Chemical constituents of living cells: biomolecules, structure and function of proteins, carbohydrates, lipids, nucleic acids.",
+      "Enzymes: types, properties, enzyme action, factors affecting enzyme activity."
+    ],
+    missions: []
+  },
+  {
+    id: "cell-cycle-cell-division",
+    title: "Cell Cycle & Cell Division: Mitosis & Meiosis",
+    shortDescription: "G1, S, G2 phases, mitotic chromosome segregation, and meiotic crossing over.",
+    longDescription: "Trace chromosomal spindle attachments and homologous recombination events under simulated microgravity.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 25,
+    constellationPosition: { x: 74, y: 70 },
+    curricularRequirements: [
+      "Cell cycle, mitosis, meiosis and their significance.",
+      "Stages of mitosis and meiosis: prophase, metaphase, anaphase, telophase, cytokinesis."
+    ],
+    missions: []
+  },
+  {
+    id: "transport-in-plants",
+    title: "Transport in Plants: Water Potential & Translocation",
+    shortDescription: "Diffusion, osmosis, water potential, transpiration pull, and phloem mass flow hypothesis.",
+    longDescription: "Regulate transpiration pull and xylem negative hydrostatic pressures in high-canopy hydroponic crops.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 20,
+    constellationPosition: { x: 78, y: 64 },
+    curricularRequirements: [
+      "Movement of water, gases and nutrients, cell-to-cell transport, diffusion, facilitated diffusion, active transport.",
+      "Plant-water relations: water potential, osmosis, plasmolysis, transpiration pull.",
+      "Translocation in phloem: mass flow hypothesis."
+    ],
+    missions: []
+  },
+  {
+    id: "mineral-nutrition",
+    title: "Mineral Nutrition: Essential Elements & Nitrogen Metabolism",
+    shortDescription: "Macro- and micro-nutrients, deficiency symptoms, and biological nitrogen fixation (nitrogenase).",
+    longDescription: "Balance nutrient hydro-solutions and culture symbiotic Rhizobium bacteroids to maximize nitrogen reduction.",
+    difficulty: "Beginner",
+    estimatedMinutes: 20,
+    constellationPosition: { x: 82, y: 72 },
+    curricularRequirements: [
+      "Essential minerals, macro and micronutrients and their role, deficiency symptoms, mineral toxicity.",
+      "Elementary idea of hydroponics, nitrogen metabolism: nitrogen cycle, biological nitrogen fixation."
+    ],
+    missions: []
+  },
+  {
+    id: "respiration-in-plants",
+    title: "Respiration in Plants: Glycolysis & Chemiosmosis",
+    shortDescription: "Cellular respiration, glycolysis, TCA cycle, electron transport system (ETS), and ATP synthesis.",
+    longDescription: "Track proton gradient generation across mitochondrial cristae to calculate net ATP yield per mole of glucose.",
+    difficulty: "Advanced",
+    estimatedMinutes: 30,
+    constellationPosition: { x: 86, y: 65 },
+    curricularRequirements: [
+      "Cellular respiration: glycolysis, fermentation (anaerobic), TCA cycle and electron transport system (aerobic).",
+      "Energy relations: number of ATP molecules generated, amphibolic pathways, respiratory quotient."
+    ],
+    missions: []
+  },
+  {
+    id: "plant-growth-development",
+    title: "Plant Growth & Development: Phytohormones & Photoperiodism",
+    shortDescription: "Auxin, gibberellin, cytokinin, abscisic acid, ethylene, photoperiodism, and vernalization.",
+    longDescription: "Calibrate spectral day-length cycles to trigger synchronous flowering in orbital food crops.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 20,
+    constellationPosition: { x: 90, y: 72 },
+    curricularRequirements: [
+      "Phases of plant growth, growth rate, conditions of growth, differentiation, dedifferentiation and redifferentiation.",
+      "Plant growth regulators: auxin, gibberellin, cytokinin, ethylene, ABA.",
+      "Photoperiodism and vernalization."
+    ],
+    missions: []
+  },
+  {
+    id: "digestion-absorption",
+    title: "Digestion & Absorption: Alimentary Biomechanics",
+    shortDescription: "Human alimentary canal, digestive enzymes, peristalsis, and nutrient absorption mechanics.",
+    longDescription: "Model enzymatic cleavage of proteins, polysaccharides, and lipids along the gastrointestinal tract.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 20,
+    constellationPosition: { x: 88, y: 80 },
+    curricularRequirements: [
+      "Alimentary canal and digestive glands, role of digestive enzymes and gastrointestinal hormones.",
+      "Peristalsis, digestion, absorption and assimilation of proteins, carbohydrates and fats."
+    ],
+    missions: []
+  },
+  {
+    id: "breathing-gas-exchange",
+    title: "Breathing & Gas Exchange: Pulmonary Dynamics",
+    shortDescription: "Respiratory volumes/capacities, partial pressure gradients, and oxyhemoglobin dissociation.",
+    longDescription: "Calibrate life-support ambient oxygen partial pressures to match alveolar diffusion rates.",
+    difficulty: "Intermediate",
+    estimatedMinutes: 25,
+    constellationPosition: { x: 84, y: 86 },
+    curricularRequirements: [
+      "Respiratory organs in animals, respiratory system in humans, mechanism of breathing and its regulation.",
+      "Respiratory volumes and capacities, exchange of gases, transport of gases (oxygen and carbon dioxide)."
+    ],
+    missions: []
+  },
+  {
+    id: "body-fluids-circulation",
+    title: "Body Fluids & Circulation: Cardiac Hemodynamics",
+    shortDescription: "Blood composition, ABO grouping, double circulation, cardiac cycle, and ECG waveforms.",
+    longDescription: "Decode electrocardiogram (ECG) P-QRS-T complexes to assess ventricular depolarization during high-G burns.",
+    difficulty: "Advanced",
+    estimatedMinutes: 25,
+    constellationPosition: { x: 78, y: 90 },
+    curricularRequirements: [
+      "Composition of blood, blood groups, coagulation of blood, composition of lymph and its function.",
+      "Human circulatory system: structure of human heart and blood vessels, cardiac cycle, cardiac output, ECG, double circulation."
+    ],
+    missions: []
+  },
+  {
+    id: "excretory-products-elimination",
+    title: "Excretory Products & Elimination: Nephron Countercurrent",
+    shortDescription: "Ammonotelism, ureotelism, uricotelism, nephron filtration, and countercurrent multiplier.",
+    longDescription: "Regulate loop of Henle medullary osmolarity gradients to prevent dehydration under low ambient humidity.",
+    difficulty: "Advanced",
+    estimatedMinutes: 25,
+    constellationPosition: { x: 70, y: 88 },
+    curricularRequirements: [
+      "Modes of excretion: ammonotelism, ureotelism, uricotelism, human excretory system: structure and function.",
+      "Urine formation, osmoregulation, regulation of kidney function: renin-angiotensin, atrial natriuretic factor, ADH and diabetes insipidus."
     ],
     missions: []
   }

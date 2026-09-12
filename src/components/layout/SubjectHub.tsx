@@ -627,36 +627,36 @@ export default function SubjectHub() {
         </div>
 
         {/* Global Progress Metrics Box */}
-        <div className="px-5 py-3 rounded-2xl border border-white/5 bg-gray-950/60 backdrop-blur-xl flex items-center gap-4 shrink-0 shadow-lg">
+        <div className="w-full sm:w-auto px-4 sm:px-5 py-3 rounded-2xl border border-white/5 bg-gray-950/60 backdrop-blur-xl flex items-center justify-between sm:justify-start gap-3 sm:gap-4 shrink-0 shadow-lg">
           <div className="flex flex-col">
             <span className="font-mono text-[9px] text-gray-500 uppercase tracking-widest">RESEARCH PLATFORM</span>
-            <span className="text-white font-mono font-bold text-lg">CLASS XI</span>
+            <span className="text-white font-mono font-bold text-base sm:text-lg">CLASS XI</span>
           </div>
           <div className="h-8 w-[1px] bg-white/10" />
           <div className="flex flex-col">
             <span className="font-mono text-[9px] text-gray-500 uppercase tracking-widest">DURABLE INTEL</span>
-            <span className="text-cyan-400 font-mono font-bold text-lg">{xp} XP</span>
+            <span className="text-cyan-400 font-mono font-bold text-base sm:text-lg">{xp} XP</span>
           </div>
           <div className="h-8 w-[1px] bg-white/10" />
           <div className="flex flex-col">
             <span className="font-mono text-[9px] text-gray-500 uppercase tracking-widest">FIELD STREAK</span>
-            <span className="text-emerald-400 font-mono font-bold text-lg">{streak}D</span>
+            <span className="text-emerald-400 font-mono font-bold text-base sm:text-lg">{streak}D</span>
           </div>
         </div>
       </div>
 
       {/* Constellation Gateway Navigation Banner */}
-      <div className="mb-6 flex items-center justify-between font-mono text-[11px] text-gray-400 px-1 relative z-10">
-        <div className="flex items-center gap-2">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-[11px] text-gray-400 px-1 relative z-10">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-cyan-400 font-semibold uppercase tracking-wider">
             LEVEL 01 // CONSTELLATION GATEWAY
           </span>
-          <span className="text-gray-600">/</span>
-          <span className="text-gray-400">
+          <span className="text-gray-600 hidden xs:inline">/</span>
+          <span className="text-gray-400 hidden xs:inline">
             SELECT DISCIPLINARY DOMAIN TO CHART EXPEDITIONS
           </span>
         </div>
-        <span className="hidden sm:inline text-gray-500 text-[10px] tracking-wider">
+        <span className="text-gray-500 text-[10px] tracking-wider">
           ISC CLASS XI EXPEDITIONS
         </span>
       </div>
@@ -677,7 +677,7 @@ export default function SubjectHub() {
             <div
               key={pack.id}
               onClick={() => selectSubject(pack.id)}
-              className={`group relative flex flex-col justify-between p-6 sm:p-7 rounded-3xl border ${theme.border} ${theme.borderHover} ${theme.glow} bg-gray-950/75 hover:bg-gray-950/90 backdrop-blur-xl transition-all duration-500 ease-out hover:-translate-y-1.5 hover:scale-[1.015] cursor-pointer overflow-hidden active:scale-[0.99] shadow-xl`}
+              className={`group relative flex flex-col justify-between p-5 sm:p-7 rounded-3xl border ${theme.border} ${theme.borderHover} ${theme.glow} bg-gray-950/75 hover:bg-gray-950/90 backdrop-blur-xl transition-all duration-500 ease-out hover:-translate-y-1.5 hover:scale-[1.015] cursor-pointer overflow-hidden active:scale-[0.99] shadow-xl`}
             >
               {/* Unique Disciplinary Background Motif (Orbital / Lattice / Graph / Cellular) */}
               {renderSubjectMotif(pack.id)}
@@ -686,23 +686,23 @@ export default function SubjectHub() {
               <div className={`absolute -top-24 -right-24 w-60 h-60 rounded-full bg-gradient-to-br ${theme.bgGlow} blur-3xl pointer-events-none group-hover:scale-125 transition-transform duration-700`} />
 
               {/* Card Header: Disciplinary Identity */}
-              <div className="flex items-start justify-between gap-4 relative z-10 mb-4">
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl border ${theme.badgeBorder} ${theme.badgeBg} flex items-center justify-center ${theme.text} shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
-                    <Icon size={28} />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 relative z-10 mb-4">
+                <div className="flex items-center gap-3.5 sm:gap-4">
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border ${theme.badgeBorder} ${theme.badgeBg} flex items-center justify-center ${theme.text} shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shrink-0`}>
+                    <Icon size={26} />
                   </div>
                   <div className="flex flex-col">
                     <span className="font-mono text-[10px] text-gray-400 uppercase tracking-widest">
                       {pack.grade}
                     </span>
-                    <h2 className="font-display font-bold text-2xl text-white tracking-tight group-hover:text-white transition-colors">
+                    <h2 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight group-hover:text-white transition-colors">
                       {pack.subject}
                     </h2>
                   </div>
                 </div>
 
                 {/* Status Indicator Chip */}
-                <div className={`px-2.5 py-1 rounded-full border ${theme.badgeBorder} ${theme.badgeBg} ${theme.badgeText} font-mono text-[10px] font-semibold tracking-wider uppercase flex items-center gap-1.5 shrink-0 shadow-sm`}>
+                <div className={`px-2.5 py-1 rounded-full border ${theme.badgeBorder} ${theme.badgeBg} ${theme.badgeText} font-mono text-[10px] font-semibold tracking-wider uppercase flex items-center gap-1.5 shrink-0 shadow-sm self-start sm:self-auto`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${theme.progressBar} animate-pulse`} />
                   <span>{active} OF {total} ACTIVE</span>
                 </div>
@@ -763,7 +763,7 @@ export default function SubjectHub() {
                 </span>
                 <button 
                   tabIndex={-1}
-                  className={`px-4 py-2 rounded-xl border text-xs font-mono font-semibold tracking-wider uppercase flex items-center gap-2 transition-all duration-200 cursor-pointer shadow-sm ${theme.buttonBg}`}
+                  className={`px-4 py-2.5 min-h-[44px] rounded-xl border text-xs font-mono font-semibold tracking-wider uppercase flex items-center gap-2 transition-all duration-200 cursor-pointer shadow-sm ${theme.buttonBg}`}
                 >
                   <span>CHART EXPEDITION PATH</span>
                   <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />

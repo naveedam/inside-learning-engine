@@ -139,7 +139,7 @@ export default function SubjectChapterTrail() {
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => selectSubject(null)}
-          className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+          className="px-3.5 py-2.5 min-h-[44px] rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
         >
           <ChevronLeft size={14} className="text-gray-400" />
           <span>BACK TO CONSTELLATION GATEWAY</span>
@@ -294,7 +294,7 @@ export default function SubjectChapterTrail() {
                   {isActive ? (
                     <button
                       tabIndex={-1}
-                      className={`px-4 py-2 rounded-xl text-xs font-mono font-bold tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${styles.button}`}
+                      className={`px-4 py-2.5 min-h-[44px] rounded-xl text-xs font-mono font-bold tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${styles.button}`}
                     >
                       <span>ENTER CHAMBER</span>
                       <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />

@@ -29,7 +29,7 @@ export default function ChapterMissionExplorer() {
       {/* Return button */}
       <button
         onClick={() => selectChapter(null)}
-        className="mb-6 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all self-start border border-white/10 active:scale-95 cursor-pointer"
+        className="mb-6 px-3.5 py-2.5 min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all self-start border border-white/10 active:scale-95 cursor-pointer"
       >
         <ChevronLeft size={14} className="text-gray-400" />
         <span>BACK TO {pack?.subject ? `${pack.subject.toUpperCase()} EXPEDITION PATH` : "EXPEDITIONS"}</span>
@@ -39,7 +39,7 @@ export default function ChapterMissionExplorer() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left 2 Columns: Chapter Narrative & Description */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="p-6 sm:p-8 rounded-3xl border border-white/10 bg-gray-950/45 backdrop-blur-xl relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-3xl border border-white/10 bg-gray-950/45 backdrop-blur-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-36 h-36 bg-cyan-500/5 blur-2xl pointer-events-none" />
 
             <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest bg-cyan-950/40 border border-cyan-500/20 px-2 py-0.5 rounded self-start inline-block mb-3">
@@ -54,17 +54,17 @@ export default function ChapterMissionExplorer() {
               {chapter.longDescription}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-white/10 pt-6 font-mono text-xs text-gray-400">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 border-t border-white/10 pt-6 font-mono text-xs text-gray-400">
               <div className="flex items-center gap-2">
-                <Clock size={14} className="text-cyan-400" />
+                <Clock size={14} className="text-cyan-400 shrink-0" />
                 <span>ESTIMATED TIME: <span className="text-white font-bold">{chapter.estimatedMinutes} Mins</span></span>
               </div>
               <div className="flex items-center gap-2">
-                <Award size={14} className="text-orange-500" />
+                <Award size={14} className="text-orange-500 shrink-0" />
                 <span>DIFFICULTY: <span className="text-white font-bold">{chapter.difficulty}</span></span>
               </div>
-              <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                <Compass size={14} className="text-emerald-500" />
+              <div className="flex items-center gap-2">
+                <Compass size={14} className="text-emerald-500 shrink-0" />
                 <span>STATUS: <span className="text-emerald-400 font-bold">READY TO DEPLOY</span></span>
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function ChapterMissionExplorer() {
                 {/* Launch Button */}
                 <button
                   onClick={() => startMission(mission.id)}
-                  className="w-full mt-2 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-98 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                  className="w-full mt-2 py-3 min-h-[44px] rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-98 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] cursor-pointer"
                 >
                   <Play size={12} fill="currentColor" /> DEPLOY TO COCKPIT <ArrowRight size={12} />
                 </button>
