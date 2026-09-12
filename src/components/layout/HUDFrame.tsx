@@ -5,10 +5,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useEngineStore } from "../../core/stores";
-import { Volume2, VolumeX, Radio, Compass, ShieldAlert, Cpu, Trophy, BookOpen } from "lucide-react";
+import { Volume2, VolumeX, Speech, Radio, Compass, ShieldAlert, Cpu, Trophy, BookOpen } from "lucide-react";
 
 export default function HUDFrame() {
-  const { xp, streak, soundEnabled, toggleSound, currentView, setView, selectSubject, selectChapter } = useEngineStore();
+  const { xp, streak, soundEnabled, toggleSound, mentorVoiceEnabled, toggleMentorVoice, currentView, setView, selectSubject, selectChapter } = useEngineStore();
   const [timeStr, setTimeStr] = useState("00:00:00 UTC");
 
   const navigateToHub = () => {
@@ -120,9 +120,29 @@ export default function HUDFrame() {
           <button
             onClick={toggleSound}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 transition-all border border-white/5 text-gray-400 hover:text-white"
-            title={soundEnabled ? "Mute Cockpit Sound" : "Unmute Cockpit Sound"}
+            title={soundEnabled ? "Mute Cockpit SFX" : "Unmute Cockpit SFX"}
           >
             {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          </button>
+
+          {/* Mentor Voice Narration Toggle (Default: OFF, Independent of SFX) */}
+          <button
+            onClick={toggleMentorVoice}
+            className={`p-2 rounded-lg active:scale-95 transition-all border flex items-center gap-1.5 ${
+              mentorVoiceEnabled
+                ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                : "bg-white/5 border-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+            }`}
+            title={
+              mentorVoiceEnabled
+                ? "Mentor Voice Narration: ON (Neutral Indian English) — Click to Mute"
+                : "Mentor Voice Narration: OFF (Opt-in) — Click to Enable"
+            }
+          >
+            <Speech size={15} className={mentorVoiceEnabled ? "text-cyan-400 animate-pulse" : "opacity-60"} />
+            <span className="hidden md:inline font-mono text-[10px] font-bold tracking-wider">
+              {mentorVoiceEnabled ? "VOICE ON" : "VOICE OFF"}
+            </span>
           </button>
         </div>
       </div>

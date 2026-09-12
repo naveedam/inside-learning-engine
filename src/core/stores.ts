@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { MissionStepType, CognitiveLoopState, InvestigationRecord } from "../types";
 import { globalEventBus } from "./EventBus";
 import { audioEngine } from "./audio";
+import { voiceEngine } from "./voice";
 
 // ============================================================================
 // ENGINE STORE (Progression, Navigation, and Profiles)
@@ -34,6 +35,7 @@ interface EngineState {
   streak: number;
   notebook: NotebookEntry[];
   soundEnabled: boolean;
+  mentorVoiceEnabled: boolean;
 
   // --- Cognitive Learning Engine Fields ---
   cognitiveLoopState: CognitiveLoopState;
@@ -59,6 +61,7 @@ interface EngineState {
   completeMission: (missionId: string) => void;
   addNotebookEntry: (title: string, text: string, subject: string) => void;
   toggleSound: () => void;
+  toggleMentorVoice: () => void;
   resetProgress: () => void;
 
   // --- Cognitive Learning Engine Actions ---
@@ -94,6 +97,7 @@ export const useEngineStore = create<EngineState>((set) => ({
     }
   ],
   soundEnabled: true,
+  mentorVoiceEnabled: false,
 
   // --- Cognitive Learning Engine initial values ---
   cognitiveLoopState: "PREDICT",
@@ -202,6 +206,14 @@ export const useEngineStore = create<EngineState>((set) => ({
       const nextVal = !state.soundEnabled;
       audioEngine.setMute(!nextVal);
       return { soundEnabled: nextVal };
+    });
+  },
+
+  toggleMentorVoice: () => {
+    set((state) => {
+      const nextVal = !state.mentorVoiceEnabled;
+      voiceEngine.setEnabled(nextVal);
+      return { mentorVoiceEnabled: nextVal };
     });
   },
 

@@ -9,10 +9,11 @@ import { getAllCurriculumPacks } from "../../content/registry";
 import { 
   MessageSquare, RefreshCw, Send, ChevronLeft, Award, HelpCircle, 
   ShieldAlert, CheckCircle, Play, ChevronRight, Compass, Atom, 
-  Beaker, BookOpen, Sparkles, LogIn, ArrowRight 
+  Beaker, BookOpen, Sparkles, LogIn, ArrowRight, Volume2, VolumeX, Speech
 } from "lucide-react";
 import { globalEventBus } from "../../core/EventBus";
 import MentorPortrait from "../ui/MentorPortrait";
+import { voiceEngine, useMentorVoice } from "../../core/voice";
 
 export default function MissionActiveView() {
   const {
@@ -37,10 +38,13 @@ export default function MissionActiveView() {
     nextStep,
     prevStep,
     unlockBadge,
-    unlockedBadges
+    unlockedBadges,
+    mentorVoiceEnabled,
+    toggleMentorVoice
   } = useEngineStore();
 
   const { isPlaying, setPlaying } = useSimulationStore();
+  const { isSpeaking, speakingText } = useMentorVoice();
 
   // 1. Dynamic Subject Resolution
   const packs = getAllCurriculumPacks();
@@ -139,13 +143,30 @@ export default function MissionActiveView() {
   const handleMentorChange = (avatarId: string) => {
     setSelectedMentor(avatarId);
     const mDial = mission.socraticMentorDialogue.find(m => m.avatar === avatarId) || mission.socraticMentorDialogue[0];
+    const introText = mDial ? mDial.introductoryRemark : "Let us investigate the parameters of this system.";
     setChatLog([
       {
         sender: "MENTOR",
-        text: mDial ? mDial.introductoryRemark : "Let us investigate the parameters of this system."
+        text: introText
       }
     ]);
+    if (mentorVoiceEnabled) {
+      voiceEngine.speak(introText, avatarId);
+    }
   };
+
+  // Track new MENTOR dialogue lines for TTS narration (Default: OFF, opt-in, non-blocking)
+  const prevChatCountRef = useRef(chatLog.length);
+  useEffect(() => {
+    if (chatLog.length > prevChatCountRef.current) {
+      const newItems = chatLog.slice(prevChatCountRef.current);
+      const latestMentorMsg = [...newItems].reverse().find((m) => m.sender === "MENTOR");
+      if (latestMentorMsg && mentorVoiceEnabled) {
+        voiceEngine.speak(latestMentorMsg.text, selectedMentor);
+      }
+    }
+    prevChatCountRef.current = chatLog.length;
+  }, [chatLog, selectedMentor, mentorVoiceEnabled]);
 
   // Submit secure Socratic prompt to server proxy endpoint
   const handleAskMentor = async (e: React.FormEvent) => {
@@ -1948,8 +1969,27 @@ export default function MissionActiveView() {
                   {dialStep.content.dialogue?.map((seg, i) => (
                     <div key={i} className="flex gap-4 items-start p-4 rounded-2xl border border-white/5 bg-white/[0.01]">
                       <MentorPortrait mentorId={seg.avatar} size={48} className="shrink-0" />
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <span className="font-mono text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{seg.speaker}</span>
+                      <div className="flex flex-col gap-1 min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{seg.speaker}</span>
+                          <button
+                            onClick={() => {
+                              if (isSpeaking && speakingText === seg.message) {
+                                voiceEngine.stop();
+                              } else {
+                                voiceEngine.replay(seg.message, seg.avatar);
+                              }
+                            }}
+                            className="p-1 rounded text-gray-400 hover:text-cyan-400 hover:bg-white/5 transition-colors"
+                            title={isSpeaking && speakingText === seg.message ? "Stop audio" : "Listen to mentor narration (Neutral Indian English)"}
+                          >
+                            {isSpeaking && speakingText === seg.message ? (
+                              <VolumeX size={13} className="text-cyan-400 animate-pulse" />
+                            ) : (
+                              <Volume2 size={13} />
+                            )}
+                          </button>
+                        </div>
                         <p className="text-gray-300 font-mono text-xs leading-relaxed">{seg.message}</p>
                       </div>
                     </div>
@@ -2807,7 +2847,26 @@ export default function MissionActiveView() {
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                     SOCRATIC AI COMPANION
                   </span>
-                  <span className="font-mono text-[9px] text-gray-500">UPLINK ACTIVE</span>
+                  <div className="flex items-center gap-2">
+                    {/* Compact Voice Narration Switcher */}
+                    <button
+                      onClick={toggleMentorVoice}
+                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[9px] border transition-all ${
+                        mentorVoiceEnabled
+                          ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.3)]"
+                          : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                      }`}
+                      title={
+                        mentorVoiceEnabled
+                          ? "Mentor Voice Narration: ON (Neutral Indian English) — Click to Mute"
+                          : "Mentor Voice Narration: OFF (Opt-in) — Click to Enable"
+                      }
+                    >
+                      <Speech size={10} className={mentorVoiceEnabled ? "text-cyan-400 animate-pulse" : "opacity-60"} />
+                      <span>{mentorVoiceEnabled ? "VOICE: ON" : "VOICE: OFF"}</span>
+                    </button>
+                    <span className="font-mono text-[9px] text-gray-500">UPLINK ACTIVE</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 p-2.5 rounded-xl border border-white/5 bg-white/[0.02]">
@@ -2856,10 +2915,31 @@ export default function MissionActiveView() {
                         CADET
                       </div>
                     )}
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="font-mono text-[8px] text-gray-400 font-bold tracking-wider">
-                        {chat.sender === "USER" ? "Astronaut Cadet" : mentorsInfo[selectedMentor]?.name}
-                      </span>
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[8px] text-gray-400 font-bold tracking-wider">
+                          {chat.sender === "USER" ? "Astronaut Cadet" : mentorsInfo[selectedMentor]?.name}
+                        </span>
+                        {chat.sender === "MENTOR" && (
+                          <button
+                            onClick={() => {
+                              if (isSpeaking && speakingText === chat.text) {
+                                voiceEngine.stop();
+                              } else {
+                                voiceEngine.replay(chat.text, selectedMentor);
+                              }
+                            }}
+                            className="p-1 -mr-1 rounded hover:bg-white/10 text-gray-400 hover:text-cyan-400 transition-colors"
+                            title={isSpeaking && speakingText === chat.text ? "Stop playback" : "Listen to mentor narration (Indian English accent)"}
+                          >
+                            {isSpeaking && speakingText === chat.text ? (
+                              <VolumeX size={12} className="text-cyan-400 animate-pulse" />
+                            ) : (
+                              <Volume2 size={12} />
+                            )}
+                          </button>
+                        )}
+                      </div>
                       <p className="leading-relaxed whitespace-pre-wrap text-xs">{chat.text}</p>
                     </div>
                   </div>

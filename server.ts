@@ -230,6 +230,149 @@ async function startServer() {
     res.json({ status: "active", engine: "Inside Learning Engine", version: "1.0.0" });
   });
 
+  // Helper: Convert raw 16-bit PCM buffer to standard RIFF/WAV format
+  function pcmToWavBuffer(pcmBuffer: Buffer, sampleRate: number = 24000, numChannels: number = 1): Buffer {
+    const header = Buffer.alloc(44);
+    const totalDataLen = pcmBuffer.length;
+    const totalFileLen = totalDataLen + 36;
+    header.write("RIFF", 0);
+    header.writeUInt32LE(totalFileLen, 4);
+    header.write("WAVE", 8);
+    header.write("fmt ", 12);
+    header.writeUInt32LE(16, 16); // format chunk length
+    header.writeUInt16LE(1, 20); // 1 = Linear PCM
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(sampleRate * numChannels * 2, 28); // byte rate
+    header.writeUInt16LE(numChannels * 2, 32); // block align
+    header.writeUInt16LE(16, 34); // bits per sample
+    header.write("data", 36);
+    header.writeUInt32LE(totalDataLen, 40);
+    return Buffer.concat([header, pcmBuffer]);
+  }
+
+  // Check TTS availability
+  app.get("/api/tts/status", (req, res) => {
+    res.json({ available: !!aiApiKey });
+  });
+
+  // Native Gemini TTS Endpoint (Neutral Indian English accent, Director's Notes tailored per mentor)
+  app.post("/api/tts", async (req, res) => {
+    const { text, mentorId } = req.body;
+
+    if (!text || typeof text !== "string" || !text.trim()) {
+      return res.status(400).json({ error: "Text is required", audio: null });
+    }
+
+    if (!ai) {
+      // Gracefully handle missing Gemini API key: mentor dialogue continues text-only
+      return res.status(200).json({ audio: null, available: false, fallback: true });
+    }
+
+    const mentor = (mentorId || "GALILEO").toUpperCase();
+
+    // Sanitize text: remove telemetry notices, system markdown, extra formatting
+    const cleanText = text
+      .replace(/\*\[Telemetry note:.*?\]\*/gi, "")
+      .replace(/\[Telemetry note:.*?\]/gi, "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/^#+\s+/gm, "")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleanText) {
+      return res.status(200).json({ audio: null, fallback: true });
+    }
+
+    // Natural-language "Director's Notes" style prompting for neutral Indian English accent
+    // with delivery style adjusted per mentor while maintaining consistent accent and pedagogical warmth
+    const mentorDeliveryNotes: Record<string, string> = {
+      GALILEO: "Pacing: Measured and thoughtful. Delivery: Philosophical, contemplative, gentle cadence, deeply curious and encouraging.",
+      NEWTON: "Pacing: Deliberate, structured, methodical. Delivery: Formal, precise, scholarly, calm and authoritative yet warmly supportive.",
+      FEYNMAN: "Pacing: Lively, conversational, buoyant. Delivery: Energetic, enthusiastic, friendly, marveling at the beauty of physical intuition.",
+      CURIE: "Pacing: Calm, focused, patient. Delivery: Thoughtful, inspiring, scientific precision delivered with quiet warmth.",
+      SYSTEM: "Pacing: Crisp, clear, friendly. Delivery: Mission flight controller, supportive, articulate, clear."
+    };
+
+    const mentorVoices: Record<string, string> = {
+      GALILEO: "Charon",
+      NEWTON: "Fenrir",
+      FEYNMAN: "Puck",
+      CURIE: "Aoede",
+      SYSTEM: "Zephyr"
+    };
+
+    const deliveryNote = mentorDeliveryNotes[mentor] || mentorDeliveryNotes.GALILEO;
+    const voiceName = mentorVoices[mentor] || "Charon";
+
+    const prompt = `Audio Profile:
+- Accent: Neutral Indian English accent, natural rhythm, clear and crisp articulation
+- Audience & Tone: Warm, encouraging, approachable pedagogical tone suitable for a high-school teenage STEM student
+- Mentor Delivery: ${deliveryNote}
+
+Transcript:
+${cleanText}`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-tts-preview",
+        contents: prompt,
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voiceName
+              }
+            }
+          }
+        }
+      });
+
+      const candidate = response.candidates?.[0];
+      const parts = candidate?.content?.parts || [];
+      let rawBase64 = "";
+      let mimeType = "audio/wav";
+
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          rawBase64 = part.inlineData.data;
+          if (part.inlineData.mimeType) {
+            mimeType = part.inlineData.mimeType;
+          }
+          break;
+        }
+      }
+
+      if (!rawBase64) {
+        return res.status(200).json({ audio: null, fallback: true });
+      }
+
+      // Convert raw PCM (e.g., audio/l16) to standard browser-compatible WAV buffer
+      if (mimeType.toLowerCase().includes("pcm") || mimeType.toLowerCase().includes("l16")) {
+        const rateMatch = mimeType.match(/rate=(\d+)/i);
+        const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+        const pcmBuf = Buffer.from(rawBase64, "base64");
+        const wavBuf = pcmToWavBuffer(pcmBuf, sampleRate, 1);
+        return res.json({
+          audio: wavBuf.toString("base64"),
+          mimeType: "audio/wav"
+        });
+      }
+
+      return res.json({
+        audio: rawBase64,
+        mimeType: mimeType
+      });
+    } catch (err: any) {
+      console.warn("TTS generation warning (falling back silently to text):", err?.message || err);
+      // Graceful fallback to text-only mode
+      return res.status(200).json({ audio: null, fallback: true });
+    }
+  });
+
   // Secure Socratic AI Mentor API proxy
   app.post("/api/mentor", async (req, res) => {
     const { query, mentorId, simulationState } = req.body;
