@@ -32,7 +32,7 @@ export default function ChapterMissionExplorer() {
         className="mb-6 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all self-start border border-white/10 active:scale-95 cursor-pointer"
       >
         <ChevronLeft size={14} className="text-gray-400" />
-        <span>BACK TO {pack?.subject ? `${pack.subject.toUpperCase()} SYLLABUS` : "SYLLABUS"}</span>
+        <span>BACK TO {pack?.subject ? `${pack.subject.toUpperCase()} EXPEDITION PATH` : "EXPEDITIONS"}</span>
       </button>
 
       {/* Chapter Overview Panel */}
@@ -43,7 +43,7 @@ export default function ChapterMissionExplorer() {
             <div className="absolute top-0 right-0 w-36 h-36 bg-cyan-500/5 blur-2xl pointer-events-none" />
 
             <span className="font-mono text-[9px] text-cyan-400 font-bold uppercase tracking-widest bg-cyan-950/40 border border-cyan-500/20 px-2 py-0.5 rounded self-start inline-block mb-3">
-              {pack?.grade || "ISC Class XI"} Curriculum Core
+              {pack?.grade || "ISC Class XI"} Sector Core
             </span>
 
             <h2 className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight leading-tight mb-2">
@@ -73,7 +73,7 @@ export default function ChapterMissionExplorer() {
           {/* Core Learning Objectives block */}
           <div className="p-6 sm:p-8 rounded-3xl border border-white/5 bg-gray-950/30 backdrop-blur-md">
             <h3 className="font-mono text-[10px] text-cyan-500 font-bold uppercase tracking-widest mb-4">
-              Academic Curricular Requirements ({pack?.grade || "ISC Class XI"})
+              FIELD BRIEFING: CORE COMPETENCIES ({pack?.grade || "ISC Class XI"})
             </h3>
             <ul className="flex flex-col gap-3 font-mono text-xs text-gray-300">
               {chapter.curricularRequirements && chapter.curricularRequirements.length > 0 ? (

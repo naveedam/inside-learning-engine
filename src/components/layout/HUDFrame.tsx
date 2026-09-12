@@ -42,7 +42,7 @@ export default function HUDFrame() {
         <div 
           onClick={navigateToHub}
           className="flex items-center gap-3 cursor-pointer group"
-          title="Return to Disciplinary Subject Hub"
+          title="Return to Constellation Gateway"
         >
           <div className="relative flex items-center justify-center w-8 h-8 rounded-lg border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 group-hover:border-cyan-400 transition-colors">
             <Cpu size={16} className="animate-pulse" />
@@ -78,7 +78,7 @@ export default function HUDFrame() {
 
         {/* Right Side: Navigation, Streaks, XP, Sound Toggle */}
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Constellation Star Map / Subject Hub Link */}
+          {/* Constellation Star Map / Gateway Link */}
           <button
             onClick={navigateToHub}
             className={`px-3 py-1.5 rounded-lg border text-[11px] font-mono tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -88,7 +88,7 @@ export default function HUDFrame() {
             }`}
           >
             <Compass size={12} />
-            <span className="hidden sm:inline">SUBJECT HUB</span>
+            <span className="hidden sm:inline">CONSTELLATION</span>
           </button>
 
           {/* Lab Journal Link */}

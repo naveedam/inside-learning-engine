@@ -137,15 +137,15 @@ export default function SubjectChapterTrail() {
           className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
         >
           <ChevronLeft size={14} className="text-gray-400" />
-          <span>BACK TO SUBJECT HUB</span>
+          <span>BACK TO CONSTELLATION GATEWAY</span>
         </button>
 
         <div className="font-mono text-[11px] text-gray-500 hidden sm:flex items-center gap-2">
-          <span>SUBJECT HUB</span>
+          <span>CONSTELLATION</span>
           <span>/</span>
           <span className={styles.text}>{pack.subject.toUpperCase()}</span>
           <span>/</span>
-          <span className="text-gray-300">SYLLABUS TRAIL</span>
+          <span className="text-gray-300">EXPEDITION TRAIL</span>
         </div>
       </div>
 
@@ -165,11 +165,11 @@ export default function SubjectChapterTrail() {
                   {pack.grade}
                 </span>
                 <span className="text-[11px] font-mono text-gray-400">
-                  SEQUENTIAL SYLLABUS PATH
+                  SEQUENTIAL EXPEDITION PATH
                 </span>
               </div>
               <h1 className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight">
-                {pack.subject} Curriculum Trail
+                {pack.subject} Expedition Trail
               </h1>
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function SubjectChapterTrail() {
           <div className="flex items-center gap-3 sm:gap-4 font-mono text-xs border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-6">
             <div className="flex flex-col">
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">TOTAL EXPEDITIONS</span>
-              <span className="text-white font-bold text-lg">{totalChapters} Chapters</span>
+              <span className="text-white font-bold text-lg">{totalChapters} Sectors</span>
             </div>
             <div className="h-8 w-[1px] bg-white/10" />
             <div className="flex flex-col">
@@ -264,7 +264,7 @@ export default function SubjectChapterTrail() {
                     {chapter.shortDescription}
                   </p>
 
-                  {/* Curricular Requirements preview */}
+                  {/* Core Competencies preview */}
                   {chapter.curricularRequirements && chapter.curricularRequirements.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {chapter.curricularRequirements.slice(0, 2).map((req, i) => (
