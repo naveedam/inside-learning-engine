@@ -292,6 +292,24 @@ apiRouter.post("/tts", async (req, res) => {
     return res.status(200).json({ audio: null, fallback: true });
   }
 
+  // Cap narration length to reduce synthesis latency (was 10-14s for typical
+  // 80-180 word mentor dialogue). Truncate at a sentence boundary within the
+  // first ~220 characters so the spoken line stays grammatically complete;
+  // the full text remains visible on-screen regardless of what's spoken.
+  const NARRATION_CHAR_CAP = 220;
+  let narrationText = cleanText;
+  if (cleanText.length > NARRATION_CHAR_CAP) {
+    const truncated = cleanText.slice(0, NARRATION_CHAR_CAP);
+    const lastSentenceEnd = Math.max(
+      truncated.lastIndexOf(". "),
+      truncated.lastIndexOf("! "),
+      truncated.lastIndexOf("? ")
+    );
+    narrationText = lastSentenceEnd > 40
+      ? truncated.slice(0, lastSentenceEnd + 1)
+      : truncated.trimEnd() + "...";
+  }
+
   // Natural-language "Director's Notes" style prompting for neutral Indian English accent
   // with delivery style adjusted per mentor while maintaining consistent accent and pedagogical warmth
   const mentorDeliveryNotes: Record<string, string> = {
@@ -319,7 +337,7 @@ apiRouter.post("/tts", async (req, res) => {
 - Mentor Delivery: ${deliveryNote}
 
 Transcript:
-${cleanText}`;
+${narrationText}`;
 
   try {
     const response = await ai.models.generateContent({
