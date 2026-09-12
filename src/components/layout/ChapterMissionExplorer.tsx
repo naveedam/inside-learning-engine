@@ -6,6 +6,7 @@
 import React from "react";
 import { useEngineStore } from "../../core/stores";
 import { getAllCurriculumPacks } from "../../content/registry";
+import { voiceEngine } from "../../core/voice";
 import { Compass, Clock, Award, Play, ChevronLeft, Zap, ArrowRight } from "lucide-react";
 
 export default function ChapterMissionExplorer() {
@@ -146,7 +147,16 @@ export default function ChapterMissionExplorer() {
 
                 {/* Launch Button */}
                 <button
-                  onClick={() => startMission(mission.id)}
+                  onClick={() => {
+                    // Unlock audio playback synchronously inside this direct
+                    // click - this is the one guaranteed user gesture every
+                    // mission launch goes through, so it's the right place
+                    // to satisfy browser autoplay policy for the whole
+                    // session, rather than relying on later async playback
+                    // attempts to somehow count as gesture-triggered.
+                    voiceEngine.unlockAudio();
+                    startMission(mission.id);
+                  }}
                   className="w-full mt-2 py-3 min-h-[44px] rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs flex items-center justify-center gap-2 active:scale-98 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] cursor-pointer"
                 >
                   <Play size={12} fill="currentColor" /> DEPLOY TO COCKPIT <ArrowRight size={12} />
