@@ -19,6 +19,11 @@ import { venturiNavigationMission } from "./physics_class_11/fluid_mechanics";
 import { carnotEfficiencyMission } from "./physics_class_11/thermodynamics";
 import { gasIdentificationMission } from "./physics_class_11/kinetic_theory";
 import { seismicResonanceMission } from "./physics_class_11/oscillations_waves";
+import { atmosphericVentingMission } from "./chemistry_class_11/states_of_matter";
+import { spontaneityThresholdMission } from "./chemistry_class_11/chemical_thermodynamics";
+import { equilibriumConstantMission } from "./chemistry_class_11/equilibrium";
+import { cellPotentialCalibrationMission } from "./chemistry_class_11/redox_reactions";
+import { bohrModelMission } from "./chemistry_class_11/atomic_structure";
 
 // Inject Newton's Laws as Expedition 02
 if (!physicsClass11Curriculum.chapters.some(ch => ch.id === "newtons-laws")) {
@@ -161,7 +166,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Heisenberg uncertainty principle, concept of orbitals, quantum numbers, shapes of s, p and d orbitals.",
       "Aufbau principle, Pauli exclusion principle, Hund's rule of maximum multiplicity, and electronic configurations."
     ],
-    missions: []
+    missions: [bohrModelMission]
   },
   {
     id: "periodicity",
@@ -206,7 +211,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Gas laws: Boyle's, Charles's, Gay Lussac's, Avogadro's laws, and ideal gas equation.",
       "Deviation from ideal behavior, van der Waals equation, liquefaction of gases, and critical temperature."
     ],
-    missions: []
+    missions: [atmosphericVentingMission]
   },
   {
     id: "chemical-thermodynamics",
@@ -221,7 +226,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "First law of thermodynamics - internal energy and enthalpy, heat capacity, Hess's law of constant heat summation.",
       "Second law of thermodynamics: entropy as a state function, Gibbs energy change for spontaneous and non-spontaneous processes."
     ],
-    missions: []
+    missions: [spontaneityThresholdMission]
   },
   {
     id: "equilibrium",
@@ -236,7 +241,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Factors affecting equilibrium: Le Chatelier's principle - concentration, temperature, pressure effect.",
       "Ionic equilibrium: ionization of acids and bases, pH scale, buffer solutions, solubility product and common ion effect."
     ],
-    missions: []
+    missions: [equilibriumConstantMission]
   },
   {
     id: "redox-reactions",
@@ -251,7 +256,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Balancing redox reactions: loss and gain of electrons, half-reaction method, oxidation number method.",
       "Electrochemical cells, standard electrode potentials, and applications of redox reactions."
     ],
-    missions: []
+    missions: [cellPotentialCalibrationMission]
   },
   {
     id: "hydrogen-s-p-block",
