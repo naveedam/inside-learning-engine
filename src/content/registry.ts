@@ -12,6 +12,13 @@ import { historyClass11Curriculum } from "./history_class_11/french_revolution";
 import { literatureClass11Curriculum } from "./literature_class_11/frankenstein";
 import { mathematicsClass11Curriculum } from "./mathematics_class_11/limits_and_derivatives";
 import { biologyClass11Curriculum } from "./biology_class_11/plant_physiology";
+import { orbitalInsertionMission } from "./physics_class_11/gravitation";
+import { rollingInertiaMission } from "./physics_class_11/rotational_motion";
+import { tensileStressMission } from "./physics_class_11/mechanical_properties_solids";
+import { venturiNavigationMission } from "./physics_class_11/fluid_mechanics";
+import { carnotEfficiencyMission } from "./physics_class_11/thermodynamics";
+import { gasIdentificationMission } from "./physics_class_11/kinetic_theory";
+import { seismicResonanceMission } from "./physics_class_11/oscillations_waves";
 
 // Inject Newton's Laws as Expedition 02
 if (!physicsClass11Curriculum.chapters.some(ch => ch.id === "newtons-laws")) {
@@ -38,7 +45,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "Universal Law of Gravitation, acceleration due to gravity, and variation with altitude.",
       "Gravitational potential energy, orbital velocity, and escape velocity derivation."
     ],
-    missions: []
+    missions: [orbitalInsertionMission]
   },
   {
     id: "rotational-motion",
@@ -53,7 +60,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "Moment of a force, torque, angular momentum, and conservation of angular momentum.",
       "Moment of inertia, radius of gyration, and parallel and perpendicular axes theorems."
     ],
-    missions: []
+    missions: [rollingInertiaMission]
   },
   {
     id: "mechanical-properties-solids",
@@ -68,7 +75,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "Young's modulus, bulk modulus, shear modulus of rigidity, and Poisson's ratio.",
       "Elastic energy density and materials fracture boundary curves."
     ],
-    missions: []
+    missions: [tensileStressMission]
   },
   {
     id: "fluid-mechanics",
@@ -83,7 +90,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "Viscosity, Stokes' law, terminal velocity, and streamline flow.",
       "Bernoulli's principle and its applications to venturi tubes and aerodynamic lift."
     ],
-    missions: []
+    missions: [venturiNavigationMission]
   },
   {
     id: "thermodynamics",
@@ -98,7 +105,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "First law of thermodynamics: work, heat, and internal energy changes.",
       "Second law of thermodynamics: reversible and irreversible processes, Carnot engine efficiency."
     ],
-    missions: []
+    missions: [carnotEfficiencyMission]
   },
   {
     id: "kinetic-theory",
@@ -113,7 +120,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "Kinetic theory of gases - assumptions, concept of pressure, and kinetic energy.",
       "RMS speed of gas molecules, degrees of freedom, and law of equipartition of energy."
     ],
-    missions: []
+    missions: [gasIdentificationMission]
   },
   {
     id: "oscillations-waves",
@@ -128,7 +135,7 @@ const physicsRoadmapSyllabusChapters: Chapter[] = [
       "Simple harmonic motion (SHM) and its equation, phase, oscillations of a spring and pendulum.",
       "Wave motion, longitudinal and transverse waves, speed of wave motion, and principle of superposition."
     ],
-    missions: []
+    missions: [seismicResonanceMission]
   }
 ];
 
