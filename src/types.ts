@@ -51,7 +51,7 @@ export interface Mission {
     description: string;
     equationLatex?: string;
   };
-  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS" | "INERTIA_BOUNDS" | "ENERGY_CONSERVATION" | "PARAMETER_SANDBOX";
+  coreInteraction: "PROJECTILE_AIMING" | "TITRATION_BALANCE" | "DECISION_TIMELINE" | "THEMATIC_ANALYSIS" | "INERTIA_BOUNDS" | "ENERGY_CONSERVATION" | "PARAMETER_SANDBOX" | "STRUCTURE_EXPLORER";
   predictionPrompt: string;
   predictionPresets: {
     id: string;
@@ -152,6 +152,20 @@ export interface Mission {
       label?: string;
     };
     formulaDisplayLatex?: string;
+  };
+  structureExplorerConfig?: {
+    diagramTitle: string;
+    svgViewBox: string; // e.g. "0 0 400 400"
+    backgroundSvg: string; // raw inline SVG markup (paths/shapes/text) for the non-interactive diagram artwork, rendered inside a <g>
+    regions: {
+      id: string;
+      label: string; // correct answer for this region
+      shapeType: "circle" | "rect";
+      cx?: number; cy?: number; r?: number; // for circle regions, in viewBox units
+      x?: number; y?: number; width?: number; height?: number; // for rect regions, in viewBox units
+      distractors: string[]; // incorrect options shown alongside the correct label
+      explanation: string; // shown once the student picks correctly
+    }[];
   };
 }
 
