@@ -14,6 +14,7 @@ import {
 import { globalEventBus } from "../../core/EventBus";
 import MentorPortrait from "../ui/MentorPortrait";
 import { voiceEngine, useMentorVoice } from "../../core/voice";
+import StructureExplorerView from "./StructureExplorerView";
 
 export default function MissionActiveView() {
   const {
@@ -1859,6 +1860,10 @@ export default function MissionActiveView() {
     }
   };
 
+  if (mission.coreInteraction === "STRUCTURE_EXPLORER") {
+    return <StructureExplorerView mission={mission} />;
+  }
+
   return (
     <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 relative flex flex-col gap-6">
       
@@ -3153,3 +3158,4 @@ export default function MissionActiveView() {
     </main>
   );
 }
+
