@@ -24,6 +24,11 @@ import { spontaneityThresholdMission } from "./chemistry_class_11/chemical_therm
 import { equilibriumConstantMission } from "./chemistry_class_11/equilibrium";
 import { cellPotentialCalibrationMission } from "./chemistry_class_11/redox_reactions";
 import { bohrModelMission } from "./chemistry_class_11/atomic_structure";
+import { atomicRadiusTrendMission } from "./chemistry_class_11/periodicity";
+import { vseprGeometryMission } from "./chemistry_class_11/chemical_bonding";
+import { hydrogenPositionMission } from "./chemistry_class_11/hydrogen_s_p_block";
+import { reactiveIntermediatesMission } from "./chemistry_class_11/organic_chemistry_basics";
+import { hydrocarbonClassMission } from "./chemistry_class_11/hydrocarbons";
 
 // Inject Newton's Laws as Expedition 02
 if (!physicsClass11Curriculum.chapters.some(ch => ch.id === "newtons-laws")) {
@@ -181,7 +186,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Periodic trends in properties of elements: atomic and ionic radii, inert gas radii.",
       "Ionization enthalpy, electron gain enthalpy, electronegativity, and valence state periodicity."
     ],
-    missions: []
+    missions: [atomicRadiusTrendMission]
   },
   {
     id: "chemical-bonding",
@@ -196,7 +201,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Valence Shell Electron Pair Repulsion (VSEPR) theory and geometry of molecules.",
       "Hybridization involving s, p and d orbitals, and Molecular Orbital Theory of homonuclear diatomic molecules."
     ],
-    missions: []
+    missions: [vseprGeometryMission]
   },
   {
     id: "states-of-matter",
@@ -271,7 +276,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Group 1 and Group 2 elements: general electronic configuration, anomalous properties, diagonal relationship.",
       "Group 13 and Group 14 elements: oxidation states, trends in chemical reactivity, inert pair effect."
     ],
-    missions: []
+    missions: [hydrogenPositionMission]
   },
   {
     id: "organic-chemistry-basics",
@@ -286,7 +291,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Electronic displacements: inductive effect, electromeric effect, resonance and hyperconjugation.",
       "Homolytic and heterolytic fission, reactive intermediates: carbocations, carbanions, free radicals, electrophiles and nucleophiles."
     ],
-    missions: []
+    missions: [reactiveIntermediatesMission]
   },
   {
     id: "hydrocarbons",
@@ -301,7 +306,7 @@ const chemistryRoadmapChapters: Chapter[] = [
       "Alkenes and Alkynes: structure of double and triple bonds, geometrical isomerism, electrophilic addition mechanisms, Markovnikov's rule.",
       "Aromatic hydrocarbons: benzene structure, resonance, aromaticity (Huckel's rule), electrophilic substitution mechanisms."
     ],
-    missions: []
+    missions: [hydrocarbonClassMission]
   }
 ];
 
@@ -829,4 +834,5 @@ export function getAllCurriculumPacks(): CurriculumPack[] {
 export function getCurriculumPackById(id: string): CurriculumPack | undefined {
   return curriculumRegistry[id];
 }
+
 
